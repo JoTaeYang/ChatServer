@@ -1,0 +1,3 @@
+[submodule "ChatServer/external/yaml-cpp"]
+	path = ChatServer/external/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
