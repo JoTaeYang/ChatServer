@@ -1,3 +1,4 @@
+#include <iostream>
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/yaml.h"
 #include "CSetting.h"

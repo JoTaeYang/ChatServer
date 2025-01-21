@@ -33,6 +33,20 @@ foreach(FILE_PATH IN LISTS SRC_FILES)
     source_group("${GROUP_NAME}" FILES "${FILE_PATH}")
 endforeach()
 
+foreach(FILE_PATH IN LISTS HEADER_FILES)
+    # 경로에서 디렉토리 이름 추출 
+    get_filename_component(PARENT_DIR "${FILE_PATH}" DIRECTORY)
+
+    # src/ 이후의 경로를 추출 (Visual Studio 필터로 사용)
+    string(REPLACE "${CMAKE_SOURCE_DIR}/include/" "Header Files/" GROUP_NAME "${PARENT_DIR}")
+
+    string(FIND ${GROUP_NAME} "Interfaces" FIND_RESULT)
+    if (FIND_RESULT GREATER -1 )
+        message("Adding to Interfaces filter: ${FILE_PATH} ${GROUP_NAME}")
+        source_group("${GROUP_NAME}" FILES "${FILE_PATH}")
+    endif()
+endforeach()
+
 # yaml-cpp를 서브 디렉토리로 추가하기 전에 CMake 옵션 설정
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Disable yaml-cpp tests" FORCE)
 set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Disable yaml-cpp tools" FORCE)
