@@ -27,7 +27,6 @@ int main()
 
     while (1)
     {
-        std::cout << serverSetting.GetPort() << "\n";
         Sleep(1000);
     }
     

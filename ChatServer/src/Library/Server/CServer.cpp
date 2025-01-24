@@ -8,6 +8,9 @@
 
 #include "Interfaces/ILock.h"
 
+#include "Packet/Header.h"
+#include "Packet/PacketType.h"
+
 #include "SpinLock.h"
 #include "CLockStack.h"
 #include "CSession.h"
@@ -73,10 +76,11 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 bool CServer::RecvPost(CSession* InSession)
 {
 	WSABUF wsa;
+	CRingBuffer* buffer = InSession->GetRecvRingBuffer();
 	DWORD flags = 0;
 	int retRecvCount = 0;
 
-	wsa.buf = InSession->GetBufferPtr();
+	wsa.buf = buffer->GetRearBufferPtr();
 	wsa.len = 256;
 
 	WSAOVERLAPPED* recv = InSession->GetRecvOverlapped();
@@ -86,11 +90,45 @@ bool CServer::RecvPost(CSession* InSession)
 		auto error = WSAGetLastError();
 		if (error != WSA_IO_PENDING)
 		{
+			puts("[Recv Post] Recv IO Error");
 			return false;
 		}
 	}
 
 	return true;
+}
+
+void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
+{
+	CRingBuffer* buffer = InSession->GetRecvRingBuffer();
+	int bufferIdx = 0;
+	Header header;	
+	size_t headerSize = sizeof(Header);
+
+	buffer->MoveRear(transferred);
+
+	buffer->Peek(reinterpret_cast<char*>(&header), headerSize);	
+	if (header.byCode != 0x89)
+	{
+		return;
+	}
+
+	if (header.bySize + headerSize > transferred)
+	{
+		return;
+	}
+
+	buffer->MoveFront(headerSize);
+
+	char echo[128] = { 0 };
+	buffer->Dequeue(echo, header.bySize);
+	
+	puts(echo);
+
+	if (!RecvPost(InSession))
+	{
+		puts("[Complete Recv] Recv Post Fin");
+	}
 }
 
 unsigned int WINAPI CServer::AcceptThread(LPVOID lpParam)
@@ -109,6 +147,13 @@ unsigned int WINAPI CServer::AcceptThread(LPVOID lpParam)
 			auto error = WSAGetLastError();
 			if (error == WSAENOBUFS || error == WSAENETDOWN)
 				break;
+		}
+
+		// Nagle Disable
+		BOOL nodelay = TRUE;
+		if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (const char*)&nodelay, sizeof(nodelay)) == SOCKET_ERROR) {			
+			closesocket(clientSocket);
+			continue;
 		}
 
 		sessionIndexCheck = server->sessionIndex->Pop();
@@ -156,22 +201,26 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 				if (session == NULL && overlapped == NULL)
 				{
 					// 워커스레드 작업 종료
+					puts("[Worker Thread] Worker Thread Fin");
 				}
 				else if (session != NULL)
 				{
 					// 클라이언트 연결 종료
+					puts("[Worker Thread] Client Connect Fin");
 				}
 			}
 			else
 			{
 				if (overlapped->type == OVEREX::RECV)
 				{
-
+					server->CompleteRecv(session, transferred);
 				}
 				else if (overlapped->type == OVEREX::SEND)
 				{
 
 				}
+				
+				puts("[Worker Thread Check]");
 			}
 		}
 		else

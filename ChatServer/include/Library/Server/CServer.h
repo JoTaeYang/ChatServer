@@ -22,6 +22,7 @@ private:
 // Networking Function Section
 private:
 	bool RecvPost(CSession* InSession);
+	void CompleteRecv(CSession* InSession, DWORD transferred);
 
 // Thread Function Section
 private:
