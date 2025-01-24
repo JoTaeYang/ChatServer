@@ -2,8 +2,8 @@
 #include <Windows.h>
 #include <strsafe.h>
 #include <time.h>
-#include "RingBuffer.h"
-#include "CSession.h"
+#include "Library/RingBuffer/RingBuffer.h"
+#include "Library/Session/CSession.h"
 
 CSession::CSession() : _socket(0), index(0), buffer()
 {

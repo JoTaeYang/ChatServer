@@ -6,16 +6,16 @@
 #include <mutex>
 #include <optional>
 
-#include "Interfaces/ILock.h"
+#include "Library/Interface/ILock.h"
 
-#include "Packet/Header.h"
-#include "Packet/PacketType.h"
+#include "Library/Packet/Header.h"
+#include "Library/Packet/PacketType.h"
 
-#include "SpinLock.h"
-#include "CLockStack.h"
-#include "CSession.h"
-#include "CSetting.h"
-#include "CServer.h"
+#include "Library/Lock/SpinLock/SpinLock.h"
+#include "Library/LockStack/CLockStack.h"
+#include "Library/Session/CSession.h"
+#include "Library/Setting/CSetting.h"
+#include "Library/Server/CServer.h"
 
 #pragma comment(lib, "ws2_32")
 

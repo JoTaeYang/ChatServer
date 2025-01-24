@@ -1,6 +1,6 @@
 #include <mutex>
-#include "Interfaces/ILock.h"
-#include "MutexLock.h"
+#include "Library/Interface/ILock.h"
+#include "Library/Lock/MutexLock/MutexLock.h"
 
 void MutexLock::lock()
 {

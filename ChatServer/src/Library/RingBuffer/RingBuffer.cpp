@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <strsafe.h>
 #include <time.h>
-#include "RingBuffer.h"
+#include "Library/RingBuffer/RingBuffer.h"
 
 CRingBuffer::CRingBuffer()
 {

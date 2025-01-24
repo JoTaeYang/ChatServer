@@ -1,5 +1,5 @@
 #include <vector>
 #include <mutex>
 #include <optional>
-#include "Interfaces/ILock.h"
-#include "CLockStack.h"
+#include "Library/Interface/ILock.h"
+#include "Library/LockStack/CLockStack.h"
