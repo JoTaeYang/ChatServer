@@ -1,6 +1,12 @@
 #pragma once
 
 
+class ILock;
+
+
+#include <vector>
+#include <optional>
+
 template <typename T>
 class CLockStack
 {

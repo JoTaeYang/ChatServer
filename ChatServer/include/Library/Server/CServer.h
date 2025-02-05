@@ -1,7 +1,18 @@
 #pragma once
 
+
+
 template<typename T>
 class CLockStack;
+class CSession;
+
+#pragma comment(lib, "ws2_32.lib")
+
+#include <WinSock2.h>
+#include <atomic>
+#include <vector>
+#include <memory>
+
 
 class CServer
 {
@@ -13,11 +24,16 @@ public:
 
 
 private:
-	std::vector<std::unique_ptr<class CSession>> session;
+	std::vector<std::unique_ptr<CSession>> session;
 	CLockStack<int>* sessionIndex;
 
 	SOCKET listenSocket;
 	HANDLE hIocp;
+
+// Virtual Section
+protected:
+	virtual void OnJoin() = 0;
+	virtual void OnRecv() = 0;
 
 // Networking Function Section
 private:
@@ -28,6 +44,7 @@ private:
 private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 	static unsigned int WINAPI WorkerThread(LPVOID lpParam);
+	static unsigned int WINAPI LogicThread(LPVOID lpParam);
 
 // Monitoring
 public:

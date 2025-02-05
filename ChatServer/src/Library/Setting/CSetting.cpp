@@ -1,7 +1,9 @@
 #include <iostream>
+
+#include "Library/Setting/CSetting.h"
+
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/yaml.h"
-#include "Library/Setting/CSetting.h"
 
 CSetting::CSetting(const std::string InFileName)
 {    

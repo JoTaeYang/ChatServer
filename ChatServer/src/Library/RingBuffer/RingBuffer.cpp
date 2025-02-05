@@ -1,8 +1,10 @@
+#include "Library/RingBuffer/RingBuffer.h"
+
 #include <iostream>
 #include <Windows.h>
 #include <strsafe.h>
 #include <time.h>
-#include "Library/RingBuffer/RingBuffer.h"
+
 
 CRingBuffer::CRingBuffer()
 {

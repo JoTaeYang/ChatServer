@@ -1,8 +1,7 @@
+#include "Library/Server/CServer.h"
+
 #include <iostream>
-#include <vector>
-#include <WinSock2.h>
 #include <process.h>
-#include <atomic>
 #include <mutex>
 #include <optional>
 
@@ -15,7 +14,6 @@
 #include "Library/LockStack/CLockStack.h"
 #include "Library/Session/CSession.h"
 #include "Library/Setting/CSetting.h"
-#include "Library/Server/CServer.h"
 
 #pragma comment(lib, "ws2_32")
 
@@ -69,8 +67,11 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	CloseHandle(threadHandle);
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
+	threadHandle = (HANDLE)_beginthreadex(NULL, 0, LogicThread, (LPVOID)this, 0, 0);
+	CloseHandle(threadHandle);
 
 	InitMonitoring();
+	return true;
 }
 
 bool CServer::RecvPost(CSession* InSession)
@@ -164,7 +165,7 @@ unsigned int WINAPI CServer::AcceptThread(LPVOID lpParam)
 
 		CSession* session = server->session[sessionIndex].get();
 
-		session->Init(clientSocket);
+		session->Init(clientSocket, sessionIndex);
 
 		puts("Session Accept");
 
@@ -244,6 +245,15 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 	}
 	
 
+	return 0;
+}
+
+unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
+{
+	while (1)
+	{
+
+	}
 	return 0;
 }
 

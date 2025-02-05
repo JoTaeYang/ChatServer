@@ -1,6 +1,7 @@
-#include <atomic>
-#include "Library/Interface/ILock.h"
 #include "Library/Lock/SpinLock/SpinLock.h"
+
+#include <atomic>
+
 
 void SpinLock::lock()
 {

@@ -6,10 +6,7 @@
 #include <mutex>
 #include <optional>
 
-#include "Library/Interface/ILock.h"
 
-#include "Library/Lock/SpinLock/SpinLock.h"
-#include "Library/LockStack/CLockStack.h"
 #include "Library/Session/CSession.h"
 #include "Library/Setting/CSetting.h"
 #include "Library/Server/CServer.h"
@@ -20,9 +17,9 @@ int main()
     const std::string configFileName = "../config/config.yaml";
 
     CSetting serverSetting(configFileName);
-    CServer server;
+    //CServer server;
 
-    server.Start(1000, serverSetting);
+    //server.Start(1000, serverSetting);
 
 
     while (1)

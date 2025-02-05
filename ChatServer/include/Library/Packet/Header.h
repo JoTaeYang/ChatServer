@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Windows.h>
 /*
 * @struct Header
 * @brief Represent Library Header
