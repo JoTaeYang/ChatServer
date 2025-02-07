@@ -1,1 +1,5 @@
 package bfedis
+
+func InitService() {
+
+}

@@ -37,6 +37,7 @@ func InitRouter() *gin.Engine {
 }
 
 func main() {
+	InitConfig()
 
 	engine = InitRouter()
 

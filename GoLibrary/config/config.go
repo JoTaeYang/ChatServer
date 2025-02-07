@@ -5,39 +5,49 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/JoTaeYang/ChatServer/GoLibrary/bfsql"
 	"gopkg.in/yaml.v3"
 )
 
 type Configs struct {
-	Redis struct {
-		PAddr   []string `yaml:"addrs"`
-		AppName string   `yaml:"app_name"`
-	} `yaml:"redis"`
+	// Redis struct {
+	// 	PAddr   []string `yaml:"addrs"`
+	// 	AppName string   `yaml:"app_name"`
+	// } `yaml:"redis,omitempty"`
 
-	MySQLDB struct {
-		Addr     string `yaml:"addr"`
-		DBName   string `yaml:"db_name"`
-		Account  string `yaml:"account"`
-		Password string `yaml:"password"`
-	} `yaml:"mysqldb"`
+	MySQLDB bfsql.Config `yaml:"mysqldb,omitempty"`
+
+	Server struct {
+		Port string `yaml:"port"`
+	} `yaml:"setting"`
 }
 
-func ReadConfig(conf interface{}, path string) (interface{}, error) {
+func readConfig(conf *Configs, path string) error {
 	filename, _ := filepath.Abs(path)
 	f, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
 
-	err = yaml.Unmarshal(f, conf)
+	err = yaml.Unmarshal(f, &conf)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
-	return conf, nil
+	return nil
 }
 
-func InitConfig() {
+func InitConfig(conf *Configs, path string) error {
+	var err error
+	err = readConfig(conf, path)
+	if err != nil {
+		return err
+	}
 
+	if conf.MySQLDB.Account != "" {
+		bfsql.InitService(conf.MySQLDB)
+	}
+
+	return nil
 }
