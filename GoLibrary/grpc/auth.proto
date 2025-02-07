@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "./bf";
+
+package bf;
+
+message LoginReq {
+    string Id = 1 [json_name = "id"];
+    string Pw = 2 [json_name = "pw"];
+}
+
+message LoginAns {
+    int32 err_code = 1 [json_name = "err_code"];
+
+    string key = 2 [json_name = "key"];
+}
+
+message SignUpReq {
+    string Id = 1 [json_name = "id"];
+    string Pw = 2 [json_name = "pw"];
+}
+
+message SignUpAns {
+    int32 err_code = 1 [json_name = "err_code"];
+}

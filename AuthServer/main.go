@@ -31,6 +31,7 @@ func InitRouter() *gin.Engine {
 	AuthRouter := r.Group("/big/auth")
 	{
 		AuthRouter.POST("/signup", api.SignUp)
+		AuthRouter.POST("/login", api.Login)
 	}
 
 	return r
