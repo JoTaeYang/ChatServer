@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/JoTaeYang/ChatServer/tree/main/AuthServer/api"
+	"github.com/JoTaeYang/ChatServer/AuthServer/api"
 	"github.com/gin-gonic/gin"
 )
 
