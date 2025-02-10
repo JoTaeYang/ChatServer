@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "./bf";
+
+package bf;
+
+message Auth {
+    string id = 1 [json_name = "id"];
+    string uid = 2 [json_name = "uid"];
+    string pw = 3 [json_name = "pw"];
+    string session_key = 4 [json_name = "session_key"];
+    map<string, string> attr = 5 [json_name = "attr"];
+
+    int64 update_at = 30 [json_name = "up_at"];                 //갱신 시간
+    int64 create_at = 31 [json_name = "cre_at"];                //생성 시간
+    int64 expire_at = 32 [json_name = "expire_at"];             //만료 시간
+}

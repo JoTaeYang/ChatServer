@@ -15,7 +15,7 @@ type Configs struct {
 	// 	AppName string   `yaml:"app_name"`
 	// } `yaml:"redis,omitempty"`
 
-	MySQLDB bfsql.Config `yaml:"mysqldb,omitempty"`
+	MySQLDB []bfsql.Config `yaml:"mysqldb,omitempty"`
 
 	Server struct {
 		Port string `yaml:"port"`
@@ -45,7 +45,7 @@ func InitConfig(conf *Configs, path string) error {
 		return err
 	}
 
-	if conf.MySQLDB.Account != "" {
+	if len(conf.MySQLDB) > 0 {
 		bfsql.InitService(conf.MySQLDB)
 	}
 

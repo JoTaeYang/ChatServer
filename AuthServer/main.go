@@ -24,6 +24,7 @@ func CORSM() gin.HandlerFunc {
 }
 
 func InitRouter() *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	r.Use(CORSM())
@@ -42,5 +43,5 @@ func main() {
 
 	engine = InitRouter()
 
-	engine.Run()
+	engine.Run(cfg.Server.Port)
 }

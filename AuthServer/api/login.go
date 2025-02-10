@@ -3,10 +3,13 @@ package api
 import (
 	"net/http"
 
+	"github.com/JoTaeYang/ChatServer/GoLibrary/base"
+	"github.com/JoTaeYang/ChatServer/GoLibrary/bf"
 	"github.com/gin-gonic/gin"
 )
 
 type LoginApi struct {
+	base.Api
 }
 
 func Login(c *gin.Context) {
@@ -39,8 +42,8 @@ func (r *LoginApi) CacheSave(c *gin.Context) bool {
 }
 
 func (r *LoginApi) Ans(c *gin.Context) bool {
-
-	c.JSON(http.StatusOK, nil)
+	ans := bf.LoginAns{}
+	c.JSON(http.StatusOK, &ans)
 	return true
 }
 

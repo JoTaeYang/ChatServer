@@ -4,6 +4,7 @@ option go_package = "./bf";
 
 package bf;
 
+
 message LoginReq {
     string Id = 1 [json_name = "id"];
     string Pw = 2 [json_name = "pw"];
