@@ -11,6 +11,7 @@ type RdbPK[T any] struct {
 	PK       string
 	CreateAt int64
 	UpdateAt int64
+	ExpireAt int64
 }
 
 func (r *RdbPK[T]) GetPK() string {

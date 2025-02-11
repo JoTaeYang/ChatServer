@@ -18,7 +18,6 @@ func UnMarshal(body io.ReadCloser, req proto.Message) error {
 	if err != nil {
 		return err
 	}
-
 	err = protojson.Unmarshal(data, req)
 	if err != nil {
 		return err

@@ -2,16 +2,24 @@ package bfsql
 
 import "strings"
 
-var IdentifierTable string = "bigIdentity"
-
 func MakeIdentifierSelectQuery() string {
 	queries := []string{
-		`SELECT * FROM `,
+		`SELECT * FROM`,
 		IdentifierTable,
 		`where pk = ?`,
 	}
 
-	resultQuery := strings.Join(queries, "")
+	resultQuery := strings.Join(queries, " ")
 
 	return resultQuery
+}
+
+func MakeIdentifierInsertQuery() string {
+	queries := []string{
+		`INSERT INTO`,
+		IdentifierTable,
+		`VALUES (?, ?, ?, ?, ?)`,
+	}
+
+	return strings.Join(queries, " ")
 }

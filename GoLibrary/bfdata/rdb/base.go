@@ -7,8 +7,6 @@ type KeyType = int32
 const (
 	KeyTypeNone KeyType = iota
 	KeyTypePK
-	KeyTypePKID
-	KeyTypeMap
 )
 
 type IModel interface {

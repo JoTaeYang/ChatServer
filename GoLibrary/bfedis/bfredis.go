@@ -1,5 +1,0 @@
-package bfedis
-
-func InitService() {
-
-}

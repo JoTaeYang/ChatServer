@@ -3,6 +3,7 @@ package bfsql
 import (
 	"database/sql"
 	"fmt"
+	"math/rand/v2"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -35,8 +36,10 @@ type RDBWrap struct {
 }
 
 var (
-	cfg map[string]Config
-	RDB RDBWrap
+	cfg             map[string]Config
+	RDB             RDBWrap
+	IdentifierTable string = "bigidentity"
+	GameTable       string = "bigauth"
 )
 
 func InitService(config []Config) error {
@@ -69,10 +72,20 @@ func (r *RDBWrap) GetIdentityDB() *sql.DB {
 	return r.getDB(key, cfg[key].ShardCount)
 }
 
+func (r *RDBWrap) GetGameDB(shard int32) *sql.DB {
+	key := "GAME"
+	return r.getDB(key, shard)
+}
+
+func (r *RDBWrap) GetGameShardIndex() int32 {
+	key := "GAME"
+	return rand.Int32N(cfg[key].ShardCount) + 1
+}
+
 func (r *RDBWrap) getDB(mode string, shard int32) *sql.DB {
 	sIdx := int(shard - 1)
 
-	if len(r.dbs[mode]) <= sIdx {
+	if len(r.dbs[mode]) < sIdx {
 		return nil
 	}
 

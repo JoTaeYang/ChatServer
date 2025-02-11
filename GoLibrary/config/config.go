@@ -5,15 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/JoTaeYang/ChatServer/GoLibrary/bfredis"
 	"github.com/JoTaeYang/ChatServer/GoLibrary/bfsql"
 	"gopkg.in/yaml.v3"
 )
 
 type Configs struct {
-	// Redis struct {
-	// 	PAddr   []string `yaml:"addrs"`
-	// 	AppName string   `yaml:"app_name"`
-	// } `yaml:"redis,omitempty"`
+	Redis bfredis.Config `yaml:"redis,omitempty"`
 
 	MySQLDB []bfsql.Config `yaml:"mysqldb,omitempty"`
 
@@ -46,7 +44,17 @@ func InitConfig(conf *Configs, path string) error {
 	}
 
 	if len(conf.MySQLDB) > 0 {
-		bfsql.InitService(conf.MySQLDB)
+		err = bfsql.InitService(conf.MySQLDB)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(conf.Redis.Addr) > 0 {
+		err = bfredis.InitService(conf.Redis)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
