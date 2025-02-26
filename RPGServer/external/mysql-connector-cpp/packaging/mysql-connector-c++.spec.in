@@ -1,0 +1,339 @@
+# Copyright (c) 2018, 2024, Oracle and/or its affiliates.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2.0, as
+# published by the Free Software Foundation.
+#
+# This program is designed to work with certain software (including
+# but not limited to OpenSSL) that is licensed under separate terms, as
+# designated in a particular file or component or in included license
+# documentation. The authors of MySQL hereby grant you an additional
+# permission to link the program and your derivative works with the
+# separately licensed software that they have either included with
+# the program or referenced in the documentation.
+#
+# Without limiting anything contained in the foregoing, this file,
+# which is part of Connector/C++, is also subject to the
+# Universal FOSS Exception, version 1.0, a copy of which can be found at
+# https://oss.oracle.com/licenses/universal-foss-exception.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License, version 2.0, for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+###############################################
+# Arguments that can be given to rpmbuild:
+#
+#  mysql_dir     Path to the MySQL installation, where to find the client lib
+#  commercial    If set, is a commercial build
+#  with_compat   If set the -compat package is built
+###############################################
+
+%{?mysql_dir:    %global mysql_opt -DMYSQL_DIR=%{mysql_dir}}
+%{!?commercial:  %global license_type GPLv2}
+%{?commercial:   %global license_type Commercial}
+%{?commercial:   %global product_suffix -commercial}
+%{!?commercial:  %global product_suffix %{nil}}
+
+%global cmake_cmd   cmake%{?el6:3}%{?el7:3}
+
+%if 0%{?suse_version} == 1315
+%global dist            .sles12
+%endif
+%if 0%{?suse_version} == 1500
+%global dist            .sl15
+%endif
+
+%global source_date_epoch_from_changelog 0
+
+%global lib_base_name  libmysqlcppconnx@ABI_VERSION_MAJOR@
+%global lib_base_name_jdbc libmysqlcppconn@JDBC_ABI_VERSION_MAJOR@
+
+# TODO: use %rpmversion if available, note that it is in the format X.Y.Z.Y
+# and the current logic requires numeric format XYYZZ.
+
+%global rpm_ver_num @RPM_VER_NUM@
+
+
+###############################################
+# Package specifications
+###############################################
+
+# Note: Double "obsoletes" entries have no effect for GPL packages but
+# for commercial ones they ensure that a commercial package replaces GPL one.
+
+Summary:        MySQL database connector for C++
+Name:           mysql-connector-c++%{?product_suffix}
+Version:        @CONCPP_VERSION@
+Release:        1%{?commercial:.1}%{?dist}
+License:        %{license_type}
+URL:            https://dev.mysql.com/doc/connector-cpp/en/
+# Note: This connector is compatible with the 8.x series.
+Provides:       libmysqlcppconn8.so.2()(%{?__isa_bits}bit) = %{version}-%{release}
+Obsoletes:      mysql-connector-c++%{?product_suffix} < %{version}-%{release}
+Obsoletes:      mysql-connector-c++ < %{version}-%{release}
+
+Source0:        https://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++%{?product_suffix}-%{version}-src.tar.gz
+%if 0%{?with_compat}
+Source1:        https://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++%{?product_suffix}-8.4.0-src.tar.gz
+%endif
+
+BuildRequires:  %{cmake_cmd} >= 3.15.0
+BuildRequires:  gcc
+BuildRequires:  gcc-c++
+BuildRequires:  openssl-devel
+
+%description
+A C++ interface for communicating with MySQL servers.
+
+
+%package        jdbc
+Summary:        MySQL Driver for C++ which mimics the JDBC 4.0 API
+Provides:       %{lib_base_name_jdbc} = %{version}-%{release}
+# Note: Field `Suggests` is recognized by RPM 4.13 and later
+%if %{rpm_ver_num} >= 41300
+Suggests:       krb5-libs, cyrus-sasl-lib, libfido2
+%endif
+Obsoletes:      %{lib_base_name_jdbc} < %{version}-%{release}
+Obsoletes:      mysql-connector-c++%{?product_suffix}-jdbc < %{version}-%{release}
+Obsoletes:      mysql-connector-c++-jdbc < %{version}-%{release}
+%description    jdbc
+This MySQL Driver for C++ mimics the JDBC 4.0 API.
+
+
+%if 0%{?with_compat}
+%package        compat
+Summary:        MySQL Connector/C++ -- backward compatibility libraries
+Provides:       libmysqlcppconn9 = %{version}-%{release}
+Obsoletes:      libmysqlcppconn9 < %{version}-%{release}
+Obsoletes:      mysql-connector-c++%{?product_suffix}-compat < %{version}-%{release}
+Obsoletes:      mysql-connector-c++-compat < %{version}-%{release}
+Obsoletes:      mysql-connector-c++%{?product_suffix}-jdbc < 9.0.0
+Obsoletes:      mysql-connector-c++-jdbc < 9.0.0
+%description    compat
+MySQL Connector/C++ -- backward compatibility libraries
+%endif
+
+%package        devel
+Summary:        Development header files and libraries for MySQL C++ client applications
+Requires:       mysql-connector-c++%{?product_suffix} =  %{version}-%{release}
+Requires:       mysql-connector-c++%{?product_suffix}-jdbc =  %{version}-%{release}
+Obsoletes:      mysql-connector-c++%{?product_suffix}-devel < %{version}-%{release}
+Obsoletes:      mysql-connector-c++-devel < %{version}-%{release}
+%description    devel
+This package contains the development header files and libraries necessary
+to develop MySQL client applications in C++.
+
+
+###############################################
+# Build instructions
+###############################################
+
+%prep
+%setup -q %{?with_compat:-b1} -n %{name}-%{version}-src
+
+SRC=`pwd`
+SRC1=%{name}-8.4.0-src
+
+cd ${RPM_BUILD_DIR}
+
+%if 0%{?with_compat}
+
+# Patch compatiblity sources:
+git apply --directory ${SRC1} ${SRC}/packaging/compat.patch
+
+%endif
+
+
+%build
+
+SRC=`pwd`
+SRC1=%{name}-8.4.0-src
+
+cd ${RPM_BUILD_DIR}
+
+%global plugin_dir %{_libdir}/mysql/%{lib_base_name_jdbc}/plugin
+
+%if 0%{?with_tests:1} && 0%{?with_gtest:1}
+%global __cmake_test_opts -DWITH_TESTS=1 -DWITH_GTEST=%{with_gtest}
+%else
+%global __cmake_test_opts %{nil}
+%endif
+%global __cmake_explicit_opts -DCMAKE_INSTALL_PREFIX="%_prefix" -DCMAKE_C_FLAGS:STRING="%optflags" -DCMAKE_CXX_FLAGS:STRING="%optflags"
+
+# Note: use relative paths for CMAKE_INSTALL_XXX options
+
+%global __cmake_common_opts -DCMAKE_BUILD_TYPE=RelWithDebInfo  -DCMAKE_INSTALL_LIBDIR=.%{_libdir} -DCMAKE_INSTALL_INCLUDEDIR=.%{_includedir}/mysql-cppconn -DWITH_SSL=system -DDEFAULT_PLUGIN_DIR=%{plugin_dir} -DWITH_JDBC=1 -DMYSQLCLIENT_STATIC_LINKING=1 -DBUNDLE_DEPENDENCIES=1 %{?mysql_opt} %{__cmake_test_opts} -DDEBUG_PREFIX_MAP=OFF
+%global __cmake_config %{cmake_cmd} %{__cmake_common_opts} %{__cmake_explicit_opts}
+
+%if 0%{?with_compat}
+rm -rf build-compat && mkdir build-compat
+%{__cmake_config} -S ${SRC1} -B build-compat
+%{cmake_cmd} --build build-compat --verbose
+%endif
+
+rm -rf build-static && mkdir build-static
+%{__cmake_config} -S ${SRC} -B build-static -DBUILD_STATIC=1
+%{cmake_cmd} --build build-static --verbose
+
+rm -rf build-dynamic && mkdir build-dynamic
+%{__cmake_config} -S ${SRC} -B build-dynamic -DBUILD_STATIC=0
+%{cmake_cmd} --build build-dynamic --verbose
+
+
+%install
+
+cd ${RPM_BUILD_DIR}
+
+# Note: order of installations is important!
+
+%if 0%{?with_compat}
+%{cmake_cmd} --install build-compat --prefix %{buildroot}
+%endif
+%{cmake_cmd} --install build-static --prefix %{buildroot}
+%{cmake_cmd} --install build-dynamic --prefix %{buildroot}
+
+# Remove unwanted files
+rm %{buildroot}/{INFO_SRC,INFO_BIN}
+
+# Add compatibility link
+cd %{buildroot}%{_libdir} && ln -s libmysqlcppconnx.so.2 libmysqlcppconn8.so.2
+
+# Add CMake files to the right location, and remove the incorrect ones
+mkdir -p %{buildroot}%{_libdir}/cmake/mysql-concpp/
+install -D -m 0644 %{buildroot}/*.cmake %{buildroot}%{_libdir}/cmake/mysql-concpp/
+rm %{buildroot}/*.cmake
+
+# Bundled plugins
+mkdir -p %{buildroot}%{plugin_dir}
+mv -v %{buildroot}%{_libdir}/plugin/*  %{buildroot}%{plugin_dir}
+rm -rf %{buildroot}%{_libdir}/{plugin,private}
+
+%pretrans devel
+test -L /usr/include/mysql-cppconn && rm -f /usr/include/mysql-cppconn || true
+
+%post
+/sbin/ldconfig
+
+%postun
+/sbin/ldconfig
+
+%post jdbc
+/sbin/ldconfig
+
+%postun jdbc
+/sbin/ldconfig
+
+
+###############################################
+# Package contents
+#
+# TODO: use %license for LICENSE.txt? But then it gets installed into
+# /usr/share/licenses/ instead of /usr/share/doc/
+###############################################
+
+%files
+%doc LICENSE.txt
+# Note: doc files are specified relative to the main source directory
+%doc README.txt ../build-dynamic/INFO_SRC ../build-dynamic/INFO_BIN
+%{_libdir}/libmysqlcppconnx.so.@ABI_VERSION_MAJOR@*
+%{_libdir}/libmysqlcppconn8.so.2
+
+%files jdbc
+%doc LICENSE.txt
+%doc README.txt ../build-dynamic/INFO_SRC ../build-dynamic/INFO_BIN
+%{_libdir}/libmysqlcppconn.so.@JDBC_ABI_VERSION_MAJOR@*
+%{plugin_dir}
+
+%if 0%{?with_compat}
+%files compat
+%doc LICENSE.txt
+%doc README.txt
+%{_libdir}/libmysqlcppconn.so.9*
+%endif
+
+%files devel
+%doc LICENSE.txt
+%doc README.txt ../build-dynamic/INFO_SRC ../build-dynamic/INFO_BIN
+%{_libdir}/libmysqlcppconn.so
+%{_libdir}/libmysqlcppconn-static.a
+%{_libdir}/libmysqlcppconnx.so
+%{_libdir}/libmysqlcppconnx-static.a
+%{_libdir}/cmake/mysql-concpp/mysql-concpp-config-version.cmake
+%{_libdir}/cmake/mysql-concpp/mysql-concpp-config.cmake
+%dir %{_includedir}/mysql-cppconn
+%{_includedir}/mysql-cppconn
+
+
+###############################################
+# Changelog
+###############################################
+
+%changelog
+
+* Thu Sep 12 2024 Rafal Somla <rafal.somla@oracle.com> - 9.1.0-1
+- Add definitions for -compat package (WL#16462)
+
+* Fri Aug 09 2024 Rafal Somla <rafal.somla@oracle.com> - 9.1.0-1
+- Bundle authentication plugins in the -jdbc package (WL#16458)
+
+* Thu Jul 11 2024 Rafal Somla <rafal.somla@oracle.com> - 9.1.0-1
+- Fixed provides/obsoletes information
+- Updates to configure/build/install logic
+
+* Sun May 12 2024 Gipson Pulla <gipson.pulla@oracle.com> - 9.0.0-1
+- Bumped the version to 9.0.0 series.
+
+* Fri Nov 03 2023 Sreedhar Sreedhargadda <sreedhar.sreedhargadda@oracle.com> - 8.2.0-1
+- Added two new files as part of ET79401
+
+* Tue Jan 25 2022 Prashant Tekriwal <prashant.tekriwal@oracle.com> - 8.0.29-1
+- Using devtoolset-11 for el7 x86 and el8(all)
+
+* Tue Nov 09 2021 Gipson Pulla <gipson.pulla@oracle.com> - 8.0.28-1
+- Removed the internal testing package
+
+* Thu Jun 10 2021 Gipson Pulla <gipson.pulla@oracle.com> - 8.0.26-1
+- Updated the platforms that need cmake3
+- The cmake3 binary isn't required for el8 platforms
+
+* Fri Feb 05 2021 Kent Boortz <kent.boortz@oracle.com> - 8.0.24-1
+- Aligned compiler settings with server
+
+* Thu Nov 12 2020 Balasubramanian Kandasamy <balasubramanian.kandasamy@oracle.com> - 8.0.23-1
+- Remove dependency on the mysql-client-plugins package for smooth upgrade
+
+* Tue Jun 30 2020 Sreedhar S <sreedhar.sreedhargadda@oracle.com> - 8.0.22-1
+- Updated the dependency list to use server's client-plugin package
+- Updated the compliers for el|678 to match server builds
+
+* Thu Jun 04 2020 Gipson Pulla <gipson.pulla@oracle.com> - 8.0.21-1
+- Updated the macro to use the system date
+
+* Fri Feb 15 2019 Bjorn Munch <bjorm.munch@oracle.com> - 8.0.16-1
+- CMake 3 should not be used on Fedora, only on Oracle Linux or Red Hat
+- Removed use of cmake_path as it is no longer needed
+
+* Thu Feb 14 2019 Rafal Somla <rafal.somla@oracle.com>
+- Use ABI version number taken from version.cmake in %files patterns
+
+* Fri Dec 14 2018 Kent Boortz <kent.boortz@oracle.com> - 8.0.15-1
+- Use CMake 3 on Fedora and Oracle Linux
+- Added option to specify what CMake to use, "--define 'cmake_path <path>'"
+
+* Tue Nov 27 2018 Balasubramanian Kandasamy <balasubramanian.kandasamy@oracle.com> - 8.0.14-1
+- Added INFO_BIN and INFO_SRC files
+
+* Fri Aug 24 2018 Kent Boortz <kent.boortz@oracle.com> - 8.0.13-1
+- Added "test" package
+
+* Wed May 16 2018 Balasubramanian Kandasamy <balasubramanian.kandasamy@oracle.com> - 8.0.11-1
+- Adapt to MySQL Connector C++ 8.0
+
+* Tue Apr 05 2016 Kent Boortz <kent.boortz@oracle.com> - 2.0.1-1
+- initial package

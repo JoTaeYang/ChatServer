@@ -27,5 +27,6 @@ int main()
     {
         Sleep(1000);
     }
-    
+
+    server.Stop();
 }

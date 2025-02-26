@@ -1,0 +1,288 @@
+Connector/C++ X DevAPI Example {#devapi_example}
+================================================
+
+Connector/C++ implements the X DevAPI, as described in
+the [X DevAPI User Guide](http://dev.mysql.com/doc/x-devapi-userguide/en/index.html).
+The X DevAPI allows one to work with the document store of MySQL Server 8 or later, communicating over the X protocol. It is also possible to execute plain SQL queries using this API.
+
+To get started, check out some of the main X DevAPI classes:
+
+- To access data first create a `mysqlx::Session` object. Keep in mind that
+  `mysqlx::Session` is not thread safe!
+
+- To manipulate data stored in a document collection or a table, create
+  a `mysqlx::Collection` or a `mysqlx::Table` object using methods
+  [`getCollection()`](@ref mysqlx::abi2::r0::Schema::getCollection)
+  or [`getTable()`](@ref mysqlx::abi2::r0::Schema::getTable) of
+  a `mysqlx::Schema` object obtained from the session.
+
+- Queries and other statements are created using methods of
+  the `mysqlx::Collection` or `mysqlx::Table` class, such as
+  [`find()`](@ref mysqlx::abi2::r0::Collection::find). They
+  are executed with
+  the [`execute()`](@ref mysqlx::abi2::r0::Executable::execute) method.
+
+- Results of a query are examined using `mysqlx::DocResult`
+  or `mysqlx::RowResult` instances returned from `execute()` method. Method
+  [`fetchOne()`](@ref mysqlx::abi2::r0::DocResult::fetchOne) fetches the next
+  item (a document or a row) from the result until there are no more items
+  left. Method [`fetchAll()`](@ref mysqlx::abi2::r0::DocResult::fetchAll) can
+  fetch all items at once and store them in an STL container.
+
+- Documents and rows from query results are represented by `mysqlx::DbDoc` and
+  `mysqlx::Row` instances, respectively.
+
+A more complete example of code that access MySQL Document Store using
+the X DevAPI is presented below. See also
+the [list of X DevAPI classes](@ref devapi).
+
+
+### Sample code which uses Connector/C++ with X DevAPI ###
+
+The following Connector/C++ application connects to a MySQL Server over
+X protocol, creates a document collection, adds a few documents to it, queries
+the collection and displays the result. The sample code can be found in file
+`testapp/devapi_test.cc` in the source distribution of Connector/C++.
+See @ref usage for instructions on how to build the sample code.
+
+@dontinclude devapi_test.cc
+
+Code which uses X DevAPI should include the `<mysqlx/xdevapi.h>` header. The API
+is declared within the `mysqlx` namespace:
+
+@skip #include <mysqlx/xdevapi.h>
+@until using namespace
+
+To create a `mysqlx::Session` object pass a connection string in URI format
+such as `"mysqlx://mike:s3cr3t!@localhost:13009"`. It specifies the host and
+port of the MySQL Server (port can be skipped in which case the default port
+will be used) and the MySQL account credentials.
+
+@skipline main
+@until Session
+
+If the session could not be established the `mysqlx::Session` constructor
+throws an error derived from `mysqlx::Error` class (which also derives from
+`std::exception`). Otherwise the session is ready to be used once created.
+
+@note
+There are alternative ways of specifying session options, for example:
+~~~~~~
+  Session s1("mysqlx://mike:s3cr3t!@localhost:13009");
+  Session s2("localhost", 13009, "mike", "s3cr3t!");
+  Session s3(13009, "mike", "s3cr3t!");  // session on localhost
+  Session s4(
+    SessionOption::USER, "mike",
+    SessionOption::PWD, "s3cr3t!",
+    SessionOption::HOST, "localhost",
+    SessionOption::PORT, 13009
+  );
+~~~~~~
+In general the `mysqlx::Session` constructor uses its arguments to create
+a `mysqlx::SessionSettings` instance -- see documentation of that class for
+possible arguments to the constructor. Enumeration `mysqlx::SessionOption`
+defines all session options recognized by the connector.
+
+
+Next a `test` schema is created and a `c1` collection within that schema. They
+are represented by `mysqlx::Schema` and `mysqlx::Collection` objects,
+respectively:
+
+@skipline "Session accepted
+@until Collection
+
+The `true` parameter
+to the [`Session::createSchema()`](@ref mysqlx::abi2::r0::Session::createSchema)/[`Schema::createCollection()`](@ref mysqlx::abi2::r0::Schema::createCollection)
+method specifies that the schema/collection should be re-used if it already
+exists (rather than throwing an error which is the default behavior).
+
+@note
+It is also possible to create a `mysqlx::Collection` object directly, without
+explicitly creating a `mysqlx::Schema` instance:
+~~~~~~~~
+Collection coll = sess.getSchema("test").createCollection("c1",true)
+~~~~~~~~
+
+Before adding documents to the collection, all the existing documents are
+removed first using
+the [`Collection::remove()`](@ref mysqlx::abi2::r0::Collection::remove)
+method. The argument to this method is an expression which selects documents
+to be removed, in this case expression `"true"` selects all documents:
+
+@skipline remove("true")
+
+Note that the `remove()` method returns an operation that must
+be explicitly executed to take effect. When executed, operation returns
+a result (ignored here; the results are used later).
+
+To insert documents use
+the [`Collection::add()`](@ref mysqlx::abi2::r0::Collection::add) method.
+Documents are described by JSON strings. Note that double quotes are required
+around field names and they must be escaped inside C strings unless
+the `R"(...)"` raw string literal syntax is used as in the example below.
+Note also how internal code block is used to delete the result when it is no longer needed:
+
+@skipline {
+@until cout
+@until cout
+@until cout
+@until cout
+@until cout
+@until cout
+@until }
+
+Result of the `add()` operation is stored in the `add` variable to be able
+to read identifiers of the inserted documents that were assigned by the server.
+They are returned by the `getGeneratedIds()` method of the `mysqlx::Result`
+class.
+
+@note
+Server does not generate identifiers for documents which have an `"_id"` field
+-- in that case the value of the `"_id"` field is used as document's
+identifier. These explicit identifiers are not reported by `getGeneratedIds()`
+method.
+
+@note
+It is possible to chain several `add()` calls as follows:
+`coll.add(doc1).add(doc2)...add(docN).execute()`. It is also possible to pass
+several documents to a single `add()` call:
+`coll.add(doc1, ..., docN).execute()`. Another option is to pass
+to `Collection::add()` an STL container with several documents.
+
+To query documents of a collection use
+the [`Collection::find()`](@ref mysqlx::abi2::r0::Collection::find) method
+which takes a Boolean expression that selects documents as its argument:
+
+@skipline "Fetching documents
+@until coll.find(
+
+The result of the `find()` operation is stored in a variable of type
+`mysqlx::DocResult` which gives access to the returned documents that satisfy
+the selection criteria. These documents can be iterated using a range-for loop:
+
+@skipline int i
+@until cout
+
+@note
+An alternative is to fetch documents one-by-one using
+the [`DocResult::fetchOne()`](@ref mysqlx::abi2::r0::DocResult::fetchOne)
+method, for example like this:
+~~~~~~~
+  DbDoc doc = docs.fetchOne();
+
+  for (int i = 0; doc; ++i, doc = docs.fetchOne()) { ... }
+~~~~~~~
+
+Given a `mysqlx::DbDoc` object it is possible to iterate
+over its fields as follows:
+
+@skipline for
+@until }
+
+Note how `DbDoc::operator[]` is used to access values of document fields:
+
+@skipline name
+@until cout
+
+The value of a field is automatically converted to a corresponding C++ type.
+If the C++ type does not match the type of the field value, conversion error
+is thrown.
+
+Fields which are sub-documents can be converted to the `mysqlx::DbDoc` type. The
+following code demonstrates how to process the `"date"` field which is
+a sub-document. Methods
+[`DbDoc::hasField()`](@ref mysqlx::abi2::r0::DbDoc::hasField)
+and [`DbDoc::fieldType()`](@ref mysqlx::abi2::r0::DbDoc::fieldType)
+are used to examine existence and type of a field within a document.
+
+@skipline if
+@until }
+@until }
+
+In case of arrays currently no conversion to C++ types is defined. However,
+individual elements of an array value can be accessed using `operator[]` or
+they can be iterated using a range-for loop.
+
+@skipline if
+@until }
+@until }
+
+Any errors thrown by Connector/C++ derive from the `mysqlx::Error` type and can
+be processed as follows:
+
+@skipline catch
+@until }
+
+
+The complete code of the example is presented below:
+
+@include devapi_test.cc
+
+A sample output produced by this code:
+
+~~~~~~~
+Creating session on localhost, port 13009 ...
+Session accepted, creating collection...
+Inserting documents...
+- added doc with id: AA71B4BF6B72E511BD76001E684A06F0
+- added doc with id: 2885B4BF6B72E511BD76001E684A06F0
+- added doc with id: 3492B4BF6B72E511BD76001E684A06F0
+- added doc with id: myuuid-1
+Fetching documents...
+
+doc#0: {"_id": "AEFD9C44EB77E5116134001E684A06F0", "age": 3, "date": {"day": 20, "month": "Apr"}, "name": "baz"}
+ field `_id`: AEFD9C44EB77E5116134001E684A06F0
+ field `age`: 3
+ field `date`: <document>
+ field `name`: baz
+ name: baz
+- date field
+  date `day`: 20
+  date `month`: Apr
+  month: Apr
+  day: 20
+
+doc#1: {"_id": "A0ABC08DAABAD1110C120800273BD115", "age": 2, "name": "bar", "toys": ["car", "ball"]}
+ field `_id`: A0ABC08DAABAD1110C120800273BD115
+ field `age`: 2
+ field `name`: bar
+ field `toys`: <array with 2 element(s)>
+ name: bar
+- toys:
+  car
+  ball
+
+Done!
+~~~~~~~
+
+<!-- TODO: Include here the output from run of testapp that is automatically generated by build system -->
+
+<!--
+  Copyright (c) 2015, 2024, Oracle and/or its affiliates.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2.0, as
+  published by the Free Software Foundation.
+
+  This program is also distributed with certain software (including
+  but not limited to OpenSSL) that is licensed under separate terms,
+  as designated in a particular file or component or in included license
+  documentation.  The authors of MySQL hereby grant you an
+  additional permission to link the program and your derivative works
+  with the separately licensed software that they have included with
+  MySQL.
+
+  Without limiting anything contained in the foregoing, this file,
+  which is part of MySQL Connector/C++, is also subject to the
+  Universal FOSS Exception, version 1.0, a copy of which can be found at
+  http://oss.oracle.com/licenses/universal-foss-exception.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License, version 2.0, for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+-->

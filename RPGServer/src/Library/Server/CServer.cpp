@@ -74,6 +74,27 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	return true;
 }
 
+bool CServer::Stop()
+{
+	closesocket(listenSocket);
+
+	CloseHandle(hIocp);
+
+	for (int i = 0; i < SessionCount; i++)
+	{
+		if (const SOCKET socket = session[i].GetSocket() != INVALID_SOCKET)
+		{
+			closesocket(socket);
+		}		
+	}
+	
+	delete sessionIndex;
+	delete[] session;
+
+	WSACleanup();
+	return true;
+}
+
 bool CServer::RecvPost(CSession* InSession)
 {
 	WSABUF wsa;
@@ -258,7 +279,7 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 {
 	CServer* server = (CServer*)lpParam;
-	const int SessionCount = server->GetInSessionCount();
+	const int SessionCount = server->GetSessionCount();
 	while (1)
 	{
 		for (int i = 0; i < SessionCount; ++i)
@@ -268,7 +289,6 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 				CMessageBuffer* buffer = nullptr;
 				if (!server->session[i].PopCompleteBuffer(buffer))
 				{
-					server->OnRecv();
 					delete buffer;
 				}				
 			}

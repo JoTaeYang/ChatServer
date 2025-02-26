@@ -1,0 +1,372 @@
+Using Connector/C++ {#usage}
+============================
+
+It is easiest to use Connector/C++ from a CMake project. For any target that
+uses Connector/C++ it is enough to link that target with the `mysql::concpp`
+target defined after loading the `mysql-concpp` module into the project, as
+in this example:
+~~~~~~
+  find_package(mysql-concpp REQUIRED)
+
+  add_executable(my-target ...)
+  target_link_libraries(my-target mysql::concpp)
+~~~~~~
+This ensures correct compiler and linker flags when building `my-target`
+so that connector public headers, the libraries and their dependencies are
+found when compiling and linking the target. See the CMake documentation
+for more information on `find_package()` command and on using CMake modules.
+
+We focus here on the scenario where Connector/C++ is installed from a package
+published by MySQL. There are two variants of this scenario. Either
+the connector is installed system-wide via package manager such as RPM or DEB,
+or it is installed locally from TGZ or ZIP package. In case of system-wide
+installation connector components are installed to default locations and things
+are expected to work out-of-the-box. In this case `find_package(mysql-concpp)`
+command should work without any further configuration.
+
+In case of local installation you need to tell CMake where to look for
+the `mysql-concpp` module. This can be done by setting the `mysql-concpp_DIR`
+variable to the top-level Connector/C++ install location:
+~~~~~~
+  set(mysql-concpp_DIR "/path/to/concpp/install")
+  find_package(mysql-concpp)
+~~~~~~
+(Alternatively the variable can be set when invoking `cmake` using
+`-Dmysql-concpp_DIR=/path/to/concpp/install` option).
+
+@note
+The `mysql-concpp` cmake module is defined starting from version 8.3.0. For
+earlier versions of Connector/C++ one has to configure build manually setting
+correct include paths, link libraries etc. See @ref manual_config
+
+Connector/C++ implements three APIs for communicating with MySQL Server. Two
+of them, X DevAPI for applications written in C++ and X DevAPI for C, access
+the document store of MySQL Server 8 or later via CRUD operations and they
+can also execute traditional SQL queries. The classic C++ API based on JDBC4
+works over classic protocol and can communicate with MySQL Servers earlier than
+version 8.
+
+The choice of the API is done by including appropriate public headers:
+
+  - <mysqlx/xdevapi.h> to use X DevAPI from C++ code
+  - <mysqlx/xapi.h> to use X DevAPI for C from plain C code
+  - <mysql/jdbc.h> to use the classic API from C++ code
+
+When using the classic API link your targets with the -jdbc variant of the connector target:
+~~~~~~
+  target_link_libraries(my-target mysql::concpp-jdbc)
+~~~~~~
+
+@note The `<mysql/jdbc.h>` header is available starting from version 8.0.16.
+For earlier versions the following set of headers needs to be included instead:
+~~~~~~
+  #include <mysql/mysql_driver.h>
+  #include <mysql/mysql_connection.h>
+  #include <mysql/cppconn/*.h>
+~~~~~~
+where the exact set of headers represented by `<mysql/cppconn/*.h>` pattern
+depends on the APIs used in the code.
+
+
+Public headers define `MYSQL_CONCPP_VERSION_NUMBER` macro that represents
+the Connector/C++ version number in XYYZZZZ format. For example for
+Connector/C++ 9.2.0 the macro will have the value 9020000.
+
+Connector/C++ applications that use X DevAPI, X DevAPI for C, or the JDBC API
+can use the `MYSQL_CONCPP_VERSION_NUMBER` macro to add conditional tests that
+determine the inclusion or exclusion of API features based on which
+Connector/C++ version introduced them.
+
+@note
+The version macros were introduced in connector version 8.0.30 and can not
+be used to test for earlier versions in which the macro is not defined and thus
+it is treated as 0 in conditional checks. That can produce unexpected
+results, for example:
+~~~~
+#if MYSQL_CONCPP_VERSION_NUMBER > 8000028
+  // this does not compile with the 8.0.29 connector!
+#endif
+
+#if MYSQL_CONCPP_VERSION_NUMBER < 8000028
+  // this compiles with the 8.0.29 connector!
+#endif
+~~~~
+
+Apart from `MYSQL_CONCPP_VERSION_NUMBER` there are also macros with individual
+components of the version number: `MYSQL_CONCPP_VERSION_MAJOR`,
+`MYSQL_CONCPP_VERSION_MINOR` and `MYSQL_CONCPP_VERSION_MICRO`.
+
+@note
+The Connector/C++ product version represented by these macros is unrelated
+to API or ABI versions, which are handled separately.
+
+
+### Linking with Connector/C++ dynamically
+
+Connector targets defined by `mysql-concpp` module refer to shared connector
+libraries and imply dynamic linking. Depending on the platform, the shared
+Connector/C++ library is named:
+
+  - `libmysqlcppconnx.so` on Unix platforms (soname `libmysqlcppconnx.so.B`)
+  - `libmysqlcppconnx.dylib` on the OSX platform (link name
+    `libmysqlcppconnx.B.dylib`)
+  - `mysqlcppconnx-B-vs14.dll` on Windows platforms
+    (with import library vs14/mysqlcppconnx.lib).
+
+The classic API implementation is placed in a separate library which
+has `libmysqlcppconn` as the base name: `libmysqlcppconn.so`,
+`libmysqlcppconn.dylib` or `mysqlcppconn-B-vs14.dll`.
+Number B in the library name is the ABI version number and the ABI versions
+used when building the application and when running it must match.
+
+@note
+The `-vs14` suffix used in Windows names indicates supported Microsoft Visual
+Studio toolchain version and is there to allow installing and using on the same
+computer connector libraries targeted at different VS versions. Currently
+Connector/C++ supports VS2019 and VS2022 and they both use the same major
+toolchain version 14. Therefore only `-vs14` variants of libraries are shipped
+at the moment.
+
+@note
+In case of local installs the location where the shared libraries are located
+is given by `MYSQL_CONCPP_RUNTIME_LIBRARY_DIR` variable which is set by
+the `mysql-concpp` module. The variable is not set for system-wide
+installations in which connector libraries are installed at default locations.
+
+
+### Linking with Connector/C++ statically
+
+It is possible to link user code with the static version of connector
+libraries. The `mysql-concpp` module defines targets `mysql::concpp-static`
+and `mysql::concpp-jdbc-static` that can be used for that purpose. In that case
+the resulting code does not require connector libraries to be present
+at run-time (however, their dependencies must still be available -- see below).
+
+@note
+Linking with the static library puts much higher requirements on
+the compatibility of the toolchains used to build the application and
+the static library itself than in the case of dynamic linking. In general
+the toolchain used to build the application must be more recent than the one
+used to build the static library. Even when building application with the same
+major version of the toolchain but less recent than the one used to build
+the library things might not work (we observed this on Windows while using
+the same VC2019 compiler for both application and connector builds but
+application was built with a slightly less recent revision). When linking
+statically usually the best bet is to build static connector library from
+sources using exactly the same toolchain that is used to build the final
+application.
+
+@note
+If Connector/C++ installation being used does not contain static libraries
+the corresponding `-static` targets are not defined by the `mysql-concpp`
+module and build configuration will fail if they are used. It is possible
+to detect this situation as follows:
+~~~~~~
+  if(NOT TARGET mysql::concpp-static)
+    message(FATAL_ERROR "Static library could not be found.")
+  endif()
+
+  target_link_libraries(my-target mysql::concpp-static)
+~~~~~~
+Similarly, depending on how Connector/C++ was built and installed, the JDBC
+library can be missing and then `-jdbc` targets will not be defined.
+
+
+### Using Connector/C++ in debug builds
+
+If both release and debug variants of the connector are available at
+the install location targets defined by the `mysql-concpp` module will use
+the appropriate variant depending on the build configuration of the project.
+
+If only release variants of the connector are available they will be used for
+both release and debug builds on non-Windows platforms. On Windows it is not
+possible to mix code built in release and debug modes. Connector targets
+defined by the `mysql-concpp` module are configured such that building in debug
+mode will fail if only release libraries are available (linker will report
+missing libraires).
+
+Standard Connector/C++ packages published by MySQL contain only release builds
+of the connector. To have debug variants, additional debug package needs
+to be installed on top of the regular one.
+
+When loading the `mysql-concpp` module a "debug" component can be required
+so that cmake will report error if debug variants of connector libraries
+are not found:
+~~~~~~
+  find_package(mysql-concpp REQUIRE debug)
+~~~~~~
+Regardless of whether the "debug" component was required or not, the module
+will set variable `MYSQL_CONCPP_DEBUG_FOUND` to true if debug libraries were
+found.
+
+
+### Connector dependencies
+
+Connector/C++ libraries depend on OpenSSL. For system-wide installations this
+dependency is resolved by ensuring that required version of OpenSSL
+is installed on the system as well. For local installations the OpenSSL
+libraries are bundled with the connector.
+
+To use a different from the default installation of OpenSSL libraries define
+target `mysql::openssl` that points at the custom installation to be used.
+For example:
+~~~~
+  add_library(my_openssl INTERFACE)
+  target_link_directories(my_openssl INTERFACE /path/to/openssl/install)
+  target_link_libraries(my_openssl ssl crypto)
+  add_library(mysql::openssl ALIAS my_openssl)
+  find_package(mysql-concpp)
+~~~~
+Note that `mysql::openssl` target must be defined before invoking
+`find_package(mysql-concpp)` in order to replace the default OpenSSL instance
+used by the module.
+
+
+The JDBC connector library might additionally depend on the MySQL client
+library. This is the case for system-wide installation where it is also ensured
+that the client library is installed on the system together with the connector.
+In case of local installations the client library is statically linked into
+the connector so that there is no external dependency.
+
+However, the dependency might fail to be resolved at build-time if the client
+library is installed at some non-standard location. In that case it
+is necessary to set `WITH_MYSQL` variable to point at the MySQL install
+location where the client library can be found:
+~~~~~~
+  set(WITH_MYSQL /path/to/MySQL/install)
+  find_package(mysql-concpp)
+~~~~~~
+The variable must be set before invoking `find_package(mysql-concpp)` command.
+If the variable is not set then it is expected that the MySQL client library
+will be found at standard locations examined by the linker -- otherwise linking
+of the code will fail.
+
+
+### Run-time dependencies
+
+An application that dynamically links to a shared connector library must have
+this library available at run-time together with its dependencies.
+If application is linked with the connector statically the connector library
+is not required at run-time but its dependencies still must be present.
+
+This requirement is most easily satisfied if Connector/C++ is installed
+system-wide in which case all run-time dependencies will be installed as well.
+In case of local installation or when installing on Windows connector libraries
+and their dependencies might be not found by dynamic linker even though they
+are present at the install location.
+
+To fix this problem on Windows the easiest (and most common) solution is
+to copy the DLLs provided by the connector package (both the connector DLL
+and the dependencies) to the location from which the application is run. This
+guarantees that they will be found by the dynamic linker. Another possibility
+is to add the location of connector DLLs to the executable path.
+
+On non-Windows platforms, if connector was installed to a non-standard
+location, one can also copy connector libraries and their dependencies next
+to the application. Another alternative is to set `LD_LIBRARY_PATH`
+or otherwise configure the dynamic linker to find required libraries at
+the non-standard location.
+
+
+#### MySQL client library plugins
+
+The classic API is implemented using the MySQL client library which might need
+to load plugins during some operations (mainly during authentication). In case
+of system-wide installation the required plugins (and their dependencies)
+should be also installed system-wide and available at the default location
+where the client library looks for them.
+
+If however Connector/C++ was installed to a local directory the plugins
+(and their dependencies) are installed together with the connector
+at `${mysql-concpp_DIR}/lib64/plugins` but the client library will not know how
+to find them. To fix this pass their location as `PLUGIN_DIR` connection option
+that is recognized by the classic API.
+
+@note
+Client library plugins must be installed and `PLUGIN_DIR` must be correctly set
+(if needed) on the target host on which the application is run. This might be
+different from the environment in which application was built. Note that client
+library plugins are loaded dynamically at run-time and they are not required
+during build process.
+
+@note
+Client library plugins can have further dependencies. For example
+`authentication_kerberos_client` plugin depends on Kerberos libraries and
+when used these libraries must be found on the target system.
+
+@note
+If client library plugins are not available the connector will still work
+correctly provided that it does not invoke any functionality that requires
+these plugins. For example if the server to which it connects does not have any
+accounts that use advanced authentication mechanisms that would require use
+of client library authentication plugins.
+
+@note
+In case of a local installation the `mysql-concpp` module sets
+the `MYSQL_CONCPP_PLUGIN_DIR` variable to the location where bundled client
+library plugins (and their dependencies) are located inside connector
+installation directory. Depending on the deployment strategy this information
+can be used, for example, to bundle the available plugins with the final
+application. In case of system-wide installation the plugins are not bundled
+with the connector and `MYSQL_CONCPP_PLUGIN_DIR` variable is not set.
+
+
+### Manual build configuration {#manual_config}
+
+It is difficult to correctly set all required compiler and linker flags,
+especially in case of static linking. For that reason we highly recommend to
+use CMake for builds depending on Connector/C++.
+
+If CMake is not an option then main settings needed for dynamic linking are the
+following:
+
+  - The `${mysql-concpp_DIR}/include` directory is added to the compiler
+    include path.
+
+  - The connector shared library `libmysqlcppconnx.so`
+    (`libmysqlcppconnx.dylib` in case of MacOS) is added to linker inputs. For
+    the library implementing the classic API the names are `libmysqlcppconn.so`
+    and `libmysqlcppconn.dylib`. It is best to specify full paths to these
+    libraries which are found at `${mysql-concpp_DIR}/lib64`.
+
+  - On Windows the linker line should refer to the import library (rather than
+    the DLL) that is located at `${mysql-concpp_DIR}/lib64/vs14`. The import
+    library name is `mysqlcppconnx.lib` (`libmysqlcppconn.lib` for the classic
+    library).
+
+We do not try to cover manual build configuration for static linking here. It
+requires careful listing of all dependencies, defining certain macros etc. If
+you need to do that your best bet is to look into `mysql-concpp-config.cmake`
+file at the root of the connector install location and try to understand what
+it does in your particular scenario.
+
+
+<!--
+  Copyright (c) 2015, 2024, Oracle and/or its affiliates.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2.0, as
+  published by the Free Software Foundation.
+
+  This program is also distributed with certain software (including
+  but not limited to OpenSSL) that is licensed under separate terms,
+  as designated in a particular file or component or in included license
+  documentation.  The authors of MySQL hereby grant you an
+  additional permission to link the program and your derivative works
+  with the separately licensed software that they have included with
+  MySQL.
+
+  Without limiting anything contained in the foregoing, this file,
+  which is part of MySQL Connector/C++, is also subject to the
+  Universal FOSS Exception, version 1.0, a copy of which can be found at
+  http://oss.oracle.com/licenses/universal-foss-exception.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License, version 2.0, for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+-->

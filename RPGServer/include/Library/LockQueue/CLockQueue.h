@@ -33,7 +33,8 @@ public:
 	void TestSetLockObj(ILock* InLockObj);
 
 private:
-	ILock* lockObj;
+	alignas(64) ILock* lockObj;
+
 	Node* head;
 	Node* tail;
 

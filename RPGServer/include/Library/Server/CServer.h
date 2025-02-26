@@ -8,6 +8,12 @@ class CSession;
 
 #pragma comment(lib, "ws2_32.lib")
 
+#ifdef _DEBUG
+#pragma comment(lib, MYSQL_LIB_DEBUG)
+#else
+#pragma comment(lib, MYSQL_LIB_RELEASE)
+#endif
+
 #include <WinSock2.h>
 #include <atomic>
 
@@ -21,15 +27,16 @@ public:
 	virtual ~CServer();
 
 	bool Start(const int InSessionCount, const class CSetting &InSetting);
+	bool Stop();
 
-	const int GetInSessionCount() { return InSessionCount; }
+	const int GetSessionCount() { return SessionCount; }
 private:
 	CSession* session;
 	CLockStack<int>* sessionIndex;
 
 	SOCKET listenSocket;
 	HANDLE hIocp;
-	int InSessionCount;
+	int SessionCount;
 
 // Virtual Section
 protected:

@@ -1,0 +1,127 @@
+Connector/C++ classic JDBC API Example {#jdbc_example}
+=======================================
+
+Connector/C++ supports the classic C++ API based on the JDBC4 specification.
+This allows an easy migration to Connector/C++ for applications that use
+earlier versions of Connector/C++ (e.g., version 1.1). See also
+[MySQL Connector/C++ 1.1 Developer Guide](https://dev.mysql.com/doc/connector-cpp/1.1/en/).
+
+@note
+JDBC API implementation uses the classic MySQL protocol and therefore it can
+work with older servers that do not support the X Protocol.
+
+
+### Sample code which uses Connector/C++ with classic C++ API ###
+
+The following code demonstrates how to connect to MySQL Server using
+the classic C++ API. After the connection is established the code executes
+a simple SQL statement and reads the result from the server. The source file
+can be found in testapp/jdbc_test.cc in the Connector/C++ source tree.
+See @ref usage for instructions on how to build the sample code.
+
+Each program which uses the classic C++ API has to include <mysql/jdbc.h>
+header:
+
+@dontinclude jdbc_test.cc
+@skip #include <mysql/jdbc.h>
+@until #include <mysql/jdbc.h>
+
+
+To establish a connection to MySQL Server, get an instance of
+`sql::Connection` from a `sql::Driver` object returned by
+`sql::mysql::get_driver_instance()`:
+
+@skip main
+@until {
+@skip try {
+@skip sql::Driver
+@until driver->connect
+
+The `connect()` method returns a pointer to a dynamically allocated connection
+object which is stored in a `std::unique_ptr` to ensure that the object
+is deleted when no longer needed. The same pattern is used for other API
+methods that return pointers to objects -- it is responsibility of the caller
+to delete them. However, the driver instance should not be explicitly deleted,
+the connector takes care of freeing it.
+
+@note
+The `get_driver_instance()` function is not thread-safe. Either avoid invoking
+it from within multiple threads at once, or surround the calls with a mutex to
+prevent simultaneous execution in multiple threads.
+
+These methods can be used to check the connection state or reconnect:
+
+ - `sql::Connection::isValid()` checks whether the connection is alive
+
+ - `sql::Connection::reconnect()` reconnects if the connection has gone down
+
+We set the default schema of the connection and create a statement object that
+will be used to execute a query:
+
+@skip con->setSchema
+@until con->createStatement
+
+To run simple queries that return a single result set use the
+`sql::Statement::executeQuery()` or `sql::PreparedStatement::executeQuery()`
+method. Both methods return `sql::ResultSet` objects. By default the classic
+API implementation buffers all result sets on the client to support cursors.
+
+@note
+If your query does not return a result set or if it returns more than one
+result set use the `sql::Statement::execute()` method instead.
+
+@skip sql::ResultSet
+@until running 'SELECT
+
+
+The code below walks through the entire result set row by row using
+`sql::ResultSet::next()` method, which returns `true` if the row was
+successfully read. Otherwise it returns `false` which means we reached the end
+of the result set and there are no more rows to read.
+The actual data is obtained through the `getXxxx()` methods `getInt()`,
+`getString()`, etc. The columns can be indexed by numbers in the order they
+are given inside the result set starting from 1. Alternatively the column name
+can be used as a string index.
+
+@skip while
+@until }
+
+Error handling is done using exceptions that derive from `sql::SQLException`
+class that is derived from `std::runtime_error`.
+
+@skip catch
+@until }
+
+Here is the complete C++ code of the test sample for the classic C++ API:
+
+@include jdbc_test.cc
+
+<!--
+  Copyright (c) 2015, 2020, Oracle and/or its affiliates.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License, version 2.0, as
+  published by the Free Software Foundation.
+
+  This program is also distributed with certain software (including
+  but not limited to OpenSSL) that is licensed under separate terms,
+  as designated in a particular file or component or in included license
+  documentation.  The authors of MySQL hereby grant you an
+  additional permission to link the program and your derivative works
+  with the separately licensed software that they have included with
+  MySQL.
+
+  Without limiting anything contained in the foregoing, this file,
+  which is part of MySQL Connector/C++, is also subject to the
+  Universal FOSS Exception, version 1.0, a copy of which can be found at
+  http://oss.oracle.com/licenses/universal-foss-exception.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License, version 2.0, for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+-->
