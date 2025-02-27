@@ -46,13 +46,11 @@ public:
 private:
 	CRingBuffer buffer;	
 	CLockQueue<class CMessageBuffer*> completeRecvBuffer;
-	
+	SessionStatus status;
 	OVEREX recvOverlapped;
 	OVEREX sendOverlapped;
 
-	SOCKET _socket;					// 家南,8byte	
+	SOCKET _socket;					// 家南,8byte		
 	unsigned short index;			// 辑滚 技记 包府 按眉俊辑 技记狼 牢郸胶, 2byte
-
-	SessionStatus status;
 };
 

@@ -41,7 +41,7 @@ private:
 // Virtual Section
 protected:
 	virtual void OnJoin(int Index) = 0;
-	virtual void OnRecv(int Index) = 0;
+	virtual void OnRecv(int Index, class CMessageBuffer* Buffer) = 0;
 
 // Networking Function Section
 private:

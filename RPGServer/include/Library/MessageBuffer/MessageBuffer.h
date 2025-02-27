@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <Windows.h>
 
 class CMessageBuffer
 {
@@ -54,6 +55,10 @@ public:
 	CMessageBuffer& operator >>(double& dValue);
 	CMessageBuffer& operator >>(long long& iValue);
 
+
+	int AddRef();
+	void DecRef();
+
 private:
 	unsigned char* Buffer;			// 버퍼				
 
@@ -62,9 +67,17 @@ private:
 	int BufferSize;										// 버퍼의 크기
 	int UseLength;										// 추가된 데이터의 길이
 
+	DWORD* RefCnt;
 private:
 	enum eMessageBuffer
 	{
 		eDefault_Buffer_Size = 1024
 	};
+
+public:
+	static CMemoryPool<CMessageBuffer>* pool; //메모리 풀을 사용하면서 Send Recv TPS가 약 15만씩 증가했음.
+
+	static CMessageBuffer* Alloc();
+
+	static int GetAllocCount();
 };

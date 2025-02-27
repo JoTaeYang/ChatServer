@@ -1,4 +1,6 @@
 #include "Library/MessageBuffer/MessageBuffer.h"
+#include "Library/MemoryPool/CMemoryPool.h"
+#include <Windows.h>
 
 CMessageBuffer::CMessageBuffer()
 {
@@ -8,6 +10,10 @@ CMessageBuffer::CMessageBuffer()
 	WritePos = 0;
 	BufferSize = eDefault_Buffer_Size;
 	UseLength = 0;
+
+	RefCnt = new DWORD;
+
+	*RefCnt = 0;
 }
 
 CMessageBuffer::CMessageBuffer(int InBufferSize)
@@ -19,11 +25,21 @@ CMessageBuffer::CMessageBuffer(int InBufferSize)
 	WritePos = 0;
 	BufferSize = InBufferSize;
 	UseLength = 0;
+
+	RefCnt = new DWORD;
+
+	*RefCnt = 0;
 }
 
 CMessageBuffer::~CMessageBuffer()
 {
-	delete[] Buffer;
+	if (Buffer != NULL)
+		delete[] Buffer;
+
+	if (RefCnt != NULL)
+		delete RefCnt;
+
+	Buffer = NULL;
 }
 
 void CMessageBuffer::Clear(void)
@@ -237,4 +253,34 @@ CMessageBuffer& CMessageBuffer::operator >>(long long& iValue)
 	ReadPos += 8;
 	UseLength -= 8;
 	return *this;
+}
+
+int CMessageBuffer::AddRef()
+{
+	return InterlockedIncrement(RefCnt);
+}
+
+void CMessageBuffer::DecRef()
+{
+	CMessageBuffer* p = this;
+
+	if (0 == InterlockedDecrement(RefCnt))
+	{
+		pool->Free(&p);
+	}
+}
+
+CMessageBuffer* CMessageBuffer::Alloc()
+{
+	CMessageBuffer* tmp = pool->Alloc();
+
+	tmp->Clear();
+	tmp->AddRef();
+
+	return tmp;
+}
+
+int CMessageBuffer::GetAllocCount()
+{
+	return 0;
 }

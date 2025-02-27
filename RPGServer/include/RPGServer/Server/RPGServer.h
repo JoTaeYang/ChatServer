@@ -9,7 +9,7 @@ public:
 
 protected:
 	virtual void OnJoin(int Index) override;
-	virtual void OnRecv(int Index) override;
+	virtual void OnRecv(int Index, class CMessageBuffer* Buffer) override;
 
 private:
 	class User* users;	

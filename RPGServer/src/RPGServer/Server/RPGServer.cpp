@@ -29,7 +29,7 @@ void RPGServer::OnJoin(int Index)
 	users[Index].Init();
 }
 
-void RPGServer::OnRecv(int Index)
+void RPGServer::OnRecv(int Index, class CMessageBuffer* Buffer)
 {
 
 }

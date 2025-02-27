@@ -129,7 +129,7 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 
 	while (transferred > 0)
 	{
-		CMessageBuffer* msgBuffer = new CMessageBuffer();
+		CMessageBuffer* msgBuffer = CMessageBuffer::Alloc();
 		buffer->MoveRear(transferred);
 
 		buffer->Peek(reinterpret_cast<char*>(&header), headerSize);
@@ -146,9 +146,9 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 		int dequeSize = headerSize + header.bySize;
 		buffer->Dequeue((char *)msgBuffer->GetBufferPtr(), dequeSize);
 		
-
+		msgBuffer->AddRef();
 		InSession->RecvToComplete(msgBuffer);
-
+		msgBuffer->DecRef();
 		transferred -= dequeSize;
 	}
 
@@ -247,9 +247,7 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 				else if (overlapped->type == OVEREX::SEND)
 				{
 
-				}
-				
-				puts("[Worker Thread Check]");
+				}				
 			}
 		}
 		else
