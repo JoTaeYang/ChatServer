@@ -23,7 +23,7 @@ bool RPGServer::Start(const int InSessionCount, const CSetting& InSetting)
 	//	users.emplace_back(std::move(tmpUser));
 	//}
 
-
+	
 	return true;
 }
 
@@ -49,7 +49,20 @@ void RPGServer::OnRecv(int Index, class CMessageBuffer* Buffer)
 	switch (header.wType)
 	{
 	case EPacketType::CS_MOVE_MY:
-		std::cout << "Recv Move Packet!!";
+		PacketProc_Move_Client(Index, Buffer);
 		break;
 	}
+}
+
+void RPGServer::PacketProc_Move_Client(int Index, CMessageBuffer* Buffer)
+{
+	float x, y, z;
+	short yaw, pitch, roll;
+	short vx, vy, vz;
+
+	*Buffer >> x >> y >> z >> yaw >> pitch >> roll >> vx >> vy >> vz;
+
+	printf("Position : %f %f %f \n", x, y, z);
+	printf("Rotation : %f %f %f \n", DequantizeInt16ToFloat(yaw), DequantizeInt16ToFloat(pitch), DequantizeInt16ToFloat(roll));
+	printf("Velocity : %f %f %f \n", DequantizeInt16ToFloat(vx), DequantizeInt16ToFloat(vy), DequantizeInt16ToFloat(vz));
 }
