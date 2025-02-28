@@ -1,6 +1,10 @@
 #include "Library/MessageBuffer/MessageBuffer.h"
-#include "Library/MemoryPool/CMemoryPool.h"
+
 #include <Windows.h>
+
+#include "Library/MemoryPool/CMemoryPool.h"
+
+CMemoryPool<CMessageBuffer>* CMessageBuffer::pool = new CMemoryPool<CMessageBuffer>(false);
 
 CMessageBuffer::CMessageBuffer()
 {
@@ -60,6 +64,12 @@ int CMessageBuffer::PutData(char* chpSrc, int iSrcSize)
 unsigned char* CMessageBuffer::GetBufferPtr(void)
 {
 	return Buffer;
+}
+
+int CMessageBuffer::MoveWritePos(int iSize)
+{
+	WritePos += iSize;
+	return WritePos;
 }
 
 /*
@@ -253,6 +263,14 @@ CMessageBuffer& CMessageBuffer::operator >>(long long& iValue)
 	ReadPos += 8;
 	UseLength -= 8;
 	return *this;
+}
+
+int CMessageBuffer::GetData(char* chpDest, int iSize)
+{
+	memcpy(chpDest, (Buffer + ReadPos), iSize);
+	ReadPos += iSize;
+	UseLength-= iSize;
+	return iSize;
 }
 
 int CMessageBuffer::AddRef()

@@ -1,4 +1,8 @@
 ﻿#pragma once
+#include <Windows.h>
+#include <iostream>
+
+
 struct stCHECKCODE
 {
 	INT64 High;

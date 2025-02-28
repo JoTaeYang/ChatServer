@@ -63,6 +63,8 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	
 	hIocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
+	SessionCount = InSessionCount;
+
 	auto threadHandle = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, (LPVOID)this, 0, 0);
@@ -103,7 +105,7 @@ bool CServer::RecvPost(CSession* InSession)
 	int retRecvCount = 0;
 
 	wsa.buf = buffer->GetRearBufferPtr();
-	wsa.len = 256;
+	wsa.len = buffer->DirectEnqueueSize();
 
 	WSAOVERLAPPED* recv = InSession->GetRecvOverlapped();
 	retRecvCount = WSARecv(InSession->GetSocket(), &wsa, 1, NULL, &flags, recv, NULL);
@@ -127,25 +129,28 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 	Header header;	
 	size_t headerSize = sizeof(Header);
 
+	buffer->MoveRear(transferred);
 	while (transferred > 0)
 	{
 		CMessageBuffer* msgBuffer = CMessageBuffer::Alloc();
-		buffer->MoveRear(transferred);
 
 		buffer->Peek(reinterpret_cast<char*>(&header), headerSize);
 		if (header.byCode != 0x89)
 		{
-			return;
+			printf("header Code : %x\n", header.byCode);
+			msgBuffer->DecRef();
+			break;
 		}
 
 		if (header.bySize + headerSize > transferred)
 		{
-			return;
+			msgBuffer->DecRef();
+			break;
 		}
 		
 		int dequeSize = headerSize + header.bySize;
 		buffer->Dequeue((char *)msgBuffer->GetBufferPtr(), dequeSize);
-		
+		msgBuffer->MoveWritePos(dequeSize);
 		msgBuffer->AddRef();
 		InSession->RecvToComplete(msgBuffer);
 		msgBuffer->DecRef();
@@ -278,19 +283,30 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 {
 	CServer* server = (CServer*)lpParam;
 	const int SessionCount = server->GetSessionCount();
+	CMessageBuffer* buffer = nullptr;
+	int loop = 0;
 	while (1)
 	{
 		for (int i = 0; i < SessionCount; ++i)
 		{
 			if (server->session[i].IsOnGame())
 			{
-				CMessageBuffer* buffer = nullptr;
-				if (!server->session[i].PopCompleteBuffer(buffer))
+				
+				loop = 0;
+				while (loop < 2000)
 				{
-					delete buffer;
-				}				
+					buffer = NULL;					
+					if (!server->session[i].PopCompleteBuffer(buffer))
+						break;
+					if (buffer == NULL)
+						break;
+					server->OnRecv(i, buffer);
+					buffer->DecRef();
+				}
+											
 			}
 		}
+		Sleep(5);
 	}
 	return 0;
 }

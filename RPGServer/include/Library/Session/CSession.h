@@ -42,7 +42,7 @@ public:
 		return (status == SessionStatus::GAME);
 	}
 
-	bool PopCompleteBuffer(CMessageBuffer* OutBuffer);
+	bool PopCompleteBuffer(CMessageBuffer*& OutBuffer);
 private:
 	CRingBuffer buffer;	
 	CLockQueue<class CMessageBuffer*> completeRecvBuffer;

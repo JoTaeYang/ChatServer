@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <Windows.h>
+#include "Library/MemoryPool/CMemoryPool.h"
 
 class CMessageBuffer
 {
@@ -16,6 +17,7 @@ public:
 public:
 	int PutData(char* chpSrc, int iSrcSize);
 	unsigned char* GetBufferPtr(void);
+	int MoveWritePos(int iSize);
 public:
 	//³Ö±â
 	CMessageBuffer& operator <<(char chValue);
@@ -55,6 +57,7 @@ public:
 	CMessageBuffer& operator >>(double& dValue);
 	CMessageBuffer& operator >>(long long& iValue);
 
+	int GetData(char* chpDest, int iSize);
 
 	int AddRef();
 	void DecRef();

@@ -62,7 +62,7 @@ CLockQueue<T>::~CLockQueue()
 template<typename T>
 bool CLockQueue<T>::Dequeue(T& OutData)
 {
-	if (count.fetch_sub(1) < 0)
+	if (count.fetch_sub(1) <= 0)
 	{
 		count.fetch_add(1);
 		return false;

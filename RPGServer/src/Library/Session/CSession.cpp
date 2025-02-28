@@ -54,7 +54,7 @@ void CSession::RecvToComplete(CMessageBuffer* InBuffer)
 	completeRecvBuffer.Enqueue(InBuffer);	
 }
 
-bool CSession::PopCompleteBuffer(CMessageBuffer* OutBuffer)
+bool CSession::PopCompleteBuffer(CMessageBuffer*& OutBuffer)
 {		
 	return completeRecvBuffer.Dequeue(OutBuffer);
 }
