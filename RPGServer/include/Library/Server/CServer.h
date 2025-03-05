@@ -58,11 +58,13 @@ private:
 public:
 	void ResetMonitoring();
 
+	std::atomic<int> exitCheck;
 private:
 	std::atomic<int> sessionCount;
 	std::atomic<int> recvTPS;
 	std::atomic<int> sendTPS;
 	std::atomic<int> acceptTPS;
+
 
 	void InitMonitoring();
 };

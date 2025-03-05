@@ -21,7 +21,6 @@
 
 CServer::~CServer()
 {
-	delete sessionIndex;
 }
 
 bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
@@ -57,8 +56,7 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	session = new CSession[InSessionCount];	
 	for (int i = 0; i < InSessionCount; ++i)
 	{
-		sessionIndex->Push(i);
-		auto tmpSession = std::make_unique<CSession>();		
+		sessionIndex->Push(i);	
 	}
 	
 	hIocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
@@ -78,8 +76,7 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 
 bool CServer::Stop()
 {
-	closesocket(listenSocket);
-
+	exitCheck += 1;
 	CloseHandle(hIocp);
 
 	for (int i = 0; i < SessionCount; i++)
@@ -92,6 +89,8 @@ bool CServer::Stop()
 	
 	delete sessionIndex;
 	delete[] session;
+
+	closesocket(listenSocket);
 
 	WSACleanup();
 	return true;
@@ -285,17 +284,16 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 	const int SessionCount = server->GetSessionCount();
 	CMessageBuffer* buffer = nullptr;
 	int loop = 0;
-	while (1)
+	while (server->exitCheck == 0)
 	{
 		for (int i = 0; i < SessionCount; ++i)
 		{
-			if (server->session[i].IsOnGame())
+			if (server->exitCheck == 0 && server->session[i].IsOnGame())
 			{
-				
 				loop = 0;
 				while (loop < 2000)
 				{
-					buffer = NULL;					
+					buffer = NULL;
 					if (!server->session[i].PopCompleteBuffer(buffer))
 						break;
 					if (buffer == NULL)
@@ -303,8 +301,9 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 					server->OnRecv(i, buffer);
 					buffer->DecRef();
 				}
-											
 			}
+			else if (server->exitCheck == 1)
+				break;
 		}
 		Sleep(5);
 	}

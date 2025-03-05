@@ -7,7 +7,7 @@
 #include "Library/RingBuffer/RingBuffer.h"
 #include "Library/Lock/SpinLock/SpinLock.h"
 
-CSession::CSession() : _socket(0), index(0), buffer(), completeRecvBuffer(new SpinLock())
+CSession::CSession() : _socket(INVALID_SOCKET), index(0), buffer(), completeRecvBuffer(new SpinLock())
 {
 	this->recvOverlapped.type = OVEREX::RECV;
 	this->sendOverlapped.type = OVEREX::SEND;

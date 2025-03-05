@@ -34,7 +34,8 @@ CLockStack<T>::CLockStack(ILock* InLockObj)
  template<typename T>
 CLockStack<T>::~CLockStack()
 {
-	delete lockObj;
+	if (lockObj)
+		delete lockObj;
 }
 
 template<typename T>

@@ -7,7 +7,7 @@
 class SpinLock : public ILock
 {
 public:
-
+	~SpinLock();
 	void lock() override;
 	void unlock() override;
 

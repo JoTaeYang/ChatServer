@@ -1,7 +1,12 @@
 #include "Library/Lock/SpinLock/SpinLock.h"
 
+#include <iostream>
 #include <atomic>
 
+
+SpinLock::~SpinLock()
+{
+}
 
 void SpinLock::lock()
 {

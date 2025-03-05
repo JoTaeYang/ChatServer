@@ -4,6 +4,7 @@
 
 #include "Library/Packet/Header.h"
 #include "Library/MessageBuffer/MessageBuffer.h"
+#include "Library/Profile/Profile.h"
 
 #include "RPGServer/User/User.h"
 #include "RPGServer/Protocol/PacketType.h"
@@ -60,8 +61,14 @@ void RPGServer::PacketProc_Move_Client(int Index, CMessageBuffer* Buffer)
 	short yaw, pitch, roll;
 	short vx, vy, vz;
 
+	Profile& profile = Profile::GetInstance();
+	profile.Begin("Move_Packet");
 	*Buffer >> x >> y >> z >> yaw >> pitch >> roll >> vx >> vy >> vz;
 
+	users[Index].UpdateCharacterMove(x, y, z
+		, DequantizeInt16ToFloat(yaw), DequantizeInt16ToFloat(pitch), DequantizeInt16ToFloat(roll)
+		, DequantizeInt16ToFloat(vx), DequantizeInt16ToFloat(vy), DequantizeInt16ToFloat(vz));
+	profile.End("Move_Packet");
 	printf("Position : %f %f %f \n", x, y, z);
 	printf("Rotation : %f %f %f \n", DequantizeInt16ToFloat(yaw), DequantizeInt16ToFloat(pitch), DequantizeInt16ToFloat(roll));
 	printf("Velocity : %f %f %f \n", DequantizeInt16ToFloat(vx), DequantizeInt16ToFloat(vy), DequantizeInt16ToFloat(vz));
