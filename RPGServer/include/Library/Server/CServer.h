@@ -48,11 +48,15 @@ private:
 	bool RecvPost(CSession* InSession);
 	void CompleteRecv(CSession* InSession, DWORD transferred);
 
+protected:
+	bool SendPacket(int Index, class CMessageBuffer* Buffer);
+
 // Thread Function Section
 private:
 	static unsigned int WINAPI AcceptThread(LPVOID lpParam);
 	static unsigned int WINAPI WorkerThread(LPVOID lpParam);
 	static unsigned int WINAPI LogicThread(LPVOID lpParam);
+	static unsigned int WINAPI SendThread(LPVOID lpParam);
 
 // Monitoring
 public:

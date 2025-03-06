@@ -42,15 +42,24 @@ public:
 		return (status == SessionStatus::GAME);
 	}
 
+	bool IsSending() {
+		return sendFlag == 1;
+	}
+
 	bool PopCompleteBuffer(CMessageBuffer*& OutBuffer);
+	void SendQEnqueue(class CMessageBuffer* InBuffer);
+
 private:
 	CRingBuffer buffer;	
 	CLockQueue<class CMessageBuffer*> completeRecvBuffer;
+	CLockQueue<class CMessageBuffer*> sendBuffer;
 	SessionStatus status;
 	OVEREX recvOverlapped;
 	OVEREX sendOverlapped;
 
 	SOCKET _socket;					// 家南,8byte		
 	unsigned short index;			// 辑滚 技记 包府 按眉俊辑 技记狼 牢郸胶, 2byte
+
+	DWORD sendFlag;
 };
 

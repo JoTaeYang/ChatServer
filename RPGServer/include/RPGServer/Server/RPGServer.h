@@ -17,7 +17,10 @@ private:
 	class User* users;	
 
 private:
+	void CreatePlayer(int Index, CMessageBuffer* buffer);
+private:
 	void PacketProc_Move_Client(int Index, class CMessageBuffer* Buffer);
+	void PacketProc_Move_ClientV1(int Index, class CMessageBuffer* Buffer);
 
 
 private:

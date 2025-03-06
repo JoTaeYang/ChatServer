@@ -2,20 +2,20 @@
 
 void User::Init()
 {
-	PosX = 0;
-	PosY = 0;
-	PosZ = 0;
-
-	RotX = 0;
-	RotY = 0;
-	RotZ = 0;
-
-	VX = 0;
-	VY = 0;
-	VZ = 0;
+	updatePos(0,0,0,0,0,0,0,0,0);
 }
 
 void User::UpdateCharacterMove(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)
+{
+	updatePos(PX, PY, PZ, RX, RY, RZ, VX, VY, VZ);
+}
+
+void User::InitPlayer(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)
+{
+	updatePos(PX, PY, PZ, RX, RY, RZ, VX, VY, VZ);
+}
+
+void User::updatePos(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)
 {
 	PosX = PX;
 	PosY = PY;

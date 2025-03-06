@@ -162,6 +162,17 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 	}
 }
 
+bool CServer::SendPacket(int Index, CMessageBuffer* Buffer)
+{
+	CSession* tmpSession = &session[Index];
+
+	Buffer->AddRef();
+
+	tmpSession->SendQEnqueue(Buffer);
+
+	return true;
+}
+
 unsigned int WINAPI CServer::AcceptThread(LPVOID lpParam)
 {
 	CServer* server = (CServer*)lpParam;
@@ -300,6 +311,29 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 						break;
 					server->OnRecv(i, buffer);
 					buffer->DecRef();
+				}
+			}
+			else if (server->exitCheck == 1)
+				break;
+		}
+		Sleep(5);
+	}
+	return 0;
+}
+
+unsigned int __stdcall CServer::SendThread(LPVOID lpParam)
+{
+	CServer* server = (CServer*)lpParam;
+	const int SessionCount = server->GetSessionCount();
+	while (server->exitCheck == 0)
+	{
+		for (int i = 0; i < SessionCount; ++i)
+		{
+			if (server->exitCheck == 0 && server->session[i].IsOnGame())
+			{
+				if (!server->session[i].IsSending())
+				{
+
 				}
 			}
 			else if (server->exitCheck == 1)
