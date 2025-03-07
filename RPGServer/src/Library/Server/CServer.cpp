@@ -4,6 +4,7 @@
 #include <process.h>
 #include <mutex>
 #include <optional>
+#include <WinSock2.h>
 
 #include "Library/Interface/ILock.h"
 
@@ -69,6 +70,8 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	CloseHandle(threadHandle);
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, LogicThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
+	threadHandle = (HANDLE)_beginthreadex(NULL, 0, SendThread, (LPVOID)this, 0, 0);
+	CloseHandle(threadHandle);
 
 	InitMonitoring();
 	return true;
@@ -119,6 +122,69 @@ bool CServer::RecvPost(CSession* InSession)
 	}
 
 	return true;
+}
+
+bool CServer::SendPost(CSession* InSession)
+{
+	WSABUF wsaBuf[100] = { 0, };
+	int bufferCount = 0;
+	int sendCount = InSession->SendCount();
+	if (sendCount < 0)
+	{
+		return true;
+	}
+
+	if (InSession->TrySend())
+	{
+		CMessageBuffer* buffer = NULL;
+
+		if (InSession->SendCount() <= 0)
+		{
+			InSession->UpdateSendFlag(0);
+			return true;
+		}
+
+		while (InSession->SendCount() > bufferCount)
+		{
+			if (bufferCount >= 100)
+				break;
+
+			buffer = NULL;
+
+			if (InSession->SendQPeek(buffer, bufferCount) == -1)
+				break;
+
+			if (buffer == NULL)
+				break;
+
+			wsaBuf[bufferCount].buf = (char*)buffer->GetBufferPtr();
+			wsaBuf[bufferCount].len = buffer->GetBufferSize();
+
+			++bufferCount;
+		}
+
+		if (bufferCount == 0)
+		{
+			InSession->UpdateSendFlag(0);
+			return true;
+		}
+
+
+		ZeroMemory(&InSession->sendOverlapped, sizeof(WSAOVERLAPPED));
+		DWORD flag = 0;
+		if (WSASend(InSession->GetSocket(), wsaBuf, bufferCount, NULL, flag, (WSAOVERLAPPED*)&InSession->sendOverlapped, NULL) == SOCKET_ERROR)
+		{
+			auto err = WSAGetLastError();
+			std::cout << "Session Error : " << err << "\n";
+			if (err != ERROR_IO_PENDING)
+			{
+				InSession->UpdateSendFlag(0);
+				//¿¬°á  ²÷±â ÀýÂ÷ ¹â±â
+				return false;
+			}
+		}
+	}
+	return false;
 }
 
 void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
@@ -333,7 +399,10 @@ unsigned int __stdcall CServer::SendThread(LPVOID lpParam)
 			{
 				if (!server->session[i].IsSending())
 				{
-
+					if (server->SendPost(&server->session[i]))
+					{
+						// TODO :: ¹» ÇØÁà¾ß ÇÒÁö ,, Á» °í¹Î
+					}
 				}
 			}
 			else if (server->exitCheck == 1)

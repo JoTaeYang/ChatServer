@@ -29,9 +29,10 @@ public:
 	bool Dequeue(T& OutData);
 	void Enqueue(T& Data);
 	void Enqueue(T&& Data);
+	int Peek(T& OutData, int _pos);
 
 	void TestSetLockObj(ILock* InLockObj);
-
+	int GetCount();
 private:
 	alignas(64) ILock* lockObj;
 
@@ -102,10 +103,38 @@ void CLockQueue<T>::Enqueue(T&& Data)
 }
 
 template<typename T>
+inline int CLockQueue<T>::Peek(T& OutData, int _pos)
+{
+	if (_pos > count)
+		return -1;
+	
+	Node* tmpHead = head->next->next;
+	for (int i = 0; i < _pos; ++i)
+	{
+		if (tmpHead == NULL || tmpHead == tail->next)
+			return -1;
+		tmpHead = tmpHead->next;
+	}
+
+	if (tmpHead == NULL)
+		return -1;
+
+	OutData = tmpHead->value;
+
+	return _pos;
+}
+
+template<typename T>
 void CLockQueue<T>::TestSetLockObj(ILock* InLockObj)
 {
 	if (lockObj != NULL)
 		delete lockObj;
 	lockObj = InLockObj;
+}
+
+template<typename T>
+inline int CLockQueue<T>::GetCount()
+{
+	return count;
 }
 

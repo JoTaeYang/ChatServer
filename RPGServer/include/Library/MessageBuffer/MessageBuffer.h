@@ -61,6 +61,7 @@ public:
 
 	int AddRef();
 	void DecRef();
+	int GetBufferSize();
 
 private:
 	unsigned char* Buffer;			// ¹öÆÛ				

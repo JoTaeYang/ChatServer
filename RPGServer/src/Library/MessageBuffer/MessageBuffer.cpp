@@ -288,6 +288,11 @@ void CMessageBuffer::DecRef()
 	}
 }
 
+int CMessageBuffer::GetBufferSize()
+{
+	return WritePos-ReadPos;
+}
+
 CMessageBuffer* CMessageBuffer::Alloc()
 {
 	CMessageBuffer* tmp = pool->Alloc();

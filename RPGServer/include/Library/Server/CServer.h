@@ -46,6 +46,7 @@ protected:
 // Networking Function Section
 private:
 	bool RecvPost(CSession* InSession);
+	bool SendPost(CSession* InSession);
 	void CompleteRecv(CSession* InSession, DWORD transferred);
 
 protected:

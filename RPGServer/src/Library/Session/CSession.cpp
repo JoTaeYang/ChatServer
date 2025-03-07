@@ -55,6 +55,16 @@ void CSession::RecvToComplete(CMessageBuffer* InBuffer)
 	completeRecvBuffer.Enqueue(InBuffer);	
 }
 
+bool CSession::TrySend()
+{
+	return InterlockedExchange(&sendFlag, 1) == 0;
+}
+
+int CSession::UpdateSendFlag(int value)
+{
+	return InterlockedExchange(&sendFlag, value);
+}
+
 bool CSession::PopCompleteBuffer(CMessageBuffer*& OutBuffer)
 {		
 	return completeRecvBuffer.Dequeue(OutBuffer);
@@ -63,4 +73,15 @@ bool CSession::PopCompleteBuffer(CMessageBuffer*& OutBuffer)
 void CSession::SendQEnqueue(CMessageBuffer* InBuffer)
 {
 	sendBuffer.Enqueue(InBuffer);
+}
+
+int CSession::SendQPeek(CMessageBuffer*& OutBuffer, int _pos)
+{
+	return sendBuffer.Peek(OutBuffer, _pos);
+}
+
+bool CSession::SendPacket(WSABUF* buf, int bufferCount)
+{
+	ZeroMemory(&sendOverlapped, sizeof(WSAOVERLAPPED));
+	return WSASend(_socket, buf, bufferCount, NULL, 0, (WSAOVERLAPPED*)&sendOverlapped, NULL);
 }

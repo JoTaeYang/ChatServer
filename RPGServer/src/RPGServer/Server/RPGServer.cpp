@@ -77,7 +77,7 @@ void RPGServer::CreatePlayer(int Index, CMessageBuffer* buffer)
 		
 	header.byCode = 0x89;
 	header.wType = EPacketType::SC_CREATE_MY;
-	header.bySize;
+	header.bySize = 24;
 
 	posX = dis(gen);
 	posZ = dis(gen);
