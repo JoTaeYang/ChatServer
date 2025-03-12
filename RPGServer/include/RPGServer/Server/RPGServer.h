@@ -12,14 +12,24 @@ public:
 protected:
 	virtual void OnJoin(int Index) override;
 	virtual void OnRecv(int Index, class CMessageBuffer* Buffer) override;
-
+	virtual void OnLeave(int Index) override;
 private:
 	class User* users;	
 
 private:
 	void CreatePlayer(int Index, CMessageBuffer* buffer);
+
 private:
+	void MakePacketCreateOtherPlayer(int Index, CMessageBuffer* buffer);
+
+private:
+	void SendAround(int Index);
+
+private:
+	// 양자화 적용
 	void PacketProc_Move_Client(int Index, class CMessageBuffer* Buffer);
+
+	// 양자화 미적용
 	void PacketProc_Move_ClientV1(int Index, class CMessageBuffer* Buffer);
 
 

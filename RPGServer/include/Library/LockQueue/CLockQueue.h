@@ -30,7 +30,7 @@ public:
 	void Enqueue(T& Data);
 	void Enqueue(T&& Data);
 	int Peek(T& OutData, int _pos);
-
+	
 	void TestSetLockObj(ILock* InLockObj);
 	int GetCount();
 private:
@@ -124,6 +124,8 @@ inline int CLockQueue<T>::Peek(T& OutData, int _pos)
 	return _pos;
 }
 
+
+
 template<typename T>
 void CLockQueue<T>::TestSetLockObj(ILock* InLockObj)
 {
@@ -133,7 +135,7 @@ void CLockQueue<T>::TestSetLockObj(ILock* InLockObj)
 }
 
 template<typename T>
-inline int CLockQueue<T>::GetCount()
+int CLockQueue<T>::GetCount()
 {
 	return count;
 }

@@ -109,6 +109,8 @@ bool CServer::RecvPost(CSession* InSession)
 	wsa.buf = buffer->GetRearBufferPtr();
 	wsa.len = buffer->DirectEnqueueSize();
 
+	InterlockedIncrement(&InSession->IOCount);
+
 	WSAOVERLAPPED* recv = InSession->GetRecvOverlapped();
 	retRecvCount = WSARecv(InSession->GetSocket(), &wsa, 1, NULL, &flags, recv, NULL);
 	if (retRecvCount == SOCKET_ERROR)
@@ -169,7 +171,9 @@ bool CServer::SendPost(CSession* InSession)
 			return true;
 		}
 
+		InSession->sendCount = bufferCount;
 
+		InterlockedIncrement(&InSession->IOCount);
 		ZeroMemory(&InSession->sendOverlapped, sizeof(WSAOVERLAPPED));
 		DWORD flag = 0;
 		if (WSASend(InSession->GetSocket(), wsaBuf, bufferCount, NULL, flag, (WSAOVERLAPPED*)&InSession->sendOverlapped, NULL) == SOCKET_ERROR)
@@ -184,7 +188,7 @@ bool CServer::SendPost(CSession* InSession)
 			}
 		}
 	}
-	return false;
+	return true;
 }
 
 void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
@@ -225,8 +229,35 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 	if (!RecvPost(InSession))
 	{
 		puts("[Complete Recv] Recv Post Fin");
+		InSession->IOCountDecre();
 	}
 }
+
+void CServer::CompleteSend(CSession* InSession, DWORD transferred)
+{
+	std::cout << "Complete Send Function Call Check\n";
+	int count = InSession->sendCount;
+
+	CMessageBuffer* pBuffer;
+	
+	while (count > 0)
+	{
+		pBuffer = NULL;
+
+		if (!InSession->PopCompleteSendBuffer(pBuffer))
+		{
+			std::cout << "Complete Send Pop Error\n";
+			continue;
+		}
+
+		pBuffer->DecRef();
+		--count;
+	}
+
+	InSession->UpdateSendFlag(0);
+}
+
+
 
 bool CServer::SendPacket(int Index, CMessageBuffer* Buffer)
 {
@@ -289,6 +320,7 @@ unsigned int WINAPI CServer::AcceptThread(LPVOID lpParam)
 		{
 			// session release
 			puts("[Accept Thread] session recv false return");
+			session->IOCountDecre();
 		}
 	}
 	return 0;
@@ -317,6 +349,7 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 				{
 					// 클라이언트 연결 종료
 					puts("[Worker Thread] Client Connect Fin");
+					session->IOCountDecre();
 				}
 			}
 			else
@@ -327,8 +360,10 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 				}
 				else if (overlapped->type == OVEREX::SEND)
 				{
-
+					server->CompleteSend(session, transferred);
 				}				
+
+				session->IOCountDecre();
 			}
 		}
 		else
@@ -355,6 +390,47 @@ unsigned int WINAPI CServer::WorkerThread(LPVOID lpParam)
 	return 0;
 }
 
+void CServer::GameProcess()
+{
+	CMessageBuffer* buffer = nullptr;
+	int loop = 0;
+	for (int i = 0; i < SessionCount; ++i)
+	{
+		if (exitCheck == 0 && session[i].IsOnGame())
+		{
+			loop = 0;
+			while (loop < 2000)
+			{
+				buffer = NULL;
+				if (!session[i].PopCompleteBuffer(buffer))
+					break;
+				if (buffer == NULL)
+					break;
+				OnRecv(i, buffer);
+				buffer->DecRef();
+			}
+		}
+		else if (exitCheck == 1)
+			break;
+	}
+}
+
+void CServer::ReleaseCheckProcess()
+{
+	int loop = 0;
+	for (int i = 0; i < SessionCount; ++i)
+	{
+		if (loop > 2000) break;
+		if (session[i].IsOnLogout() && !session[i].IsSending())
+		{
+			session[i].Release();
+
+			++loop;
+			sessionIndex->Push(i);
+		}
+	}
+}
+
 unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 {
 	CServer* server = (CServer*)lpParam;
@@ -363,25 +439,8 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 	int loop = 0;
 	while (server->exitCheck == 0)
 	{
-		for (int i = 0; i < SessionCount; ++i)
-		{
-			if (server->exitCheck == 0 && server->session[i].IsOnGame())
-			{
-				loop = 0;
-				while (loop < 2000)
-				{
-					buffer = NULL;
-					if (!server->session[i].PopCompleteBuffer(buffer))
-						break;
-					if (buffer == NULL)
-						break;
-					server->OnRecv(i, buffer);
-					buffer->DecRef();
-				}
-			}
-			else if (server->exitCheck == 1)
-				break;
-		}
+		server->GameProcess();
+		server->ReleaseCheckProcess();
 		Sleep(5);
 	}
 	return 0;
@@ -399,9 +458,9 @@ unsigned int __stdcall CServer::SendThread(LPVOID lpParam)
 			{
 				if (!server->session[i].IsSending())
 				{
-					if (server->SendPost(&server->session[i]))
-					{
-						// TODO :: 뭘 해줘야 할지 ,, 좀 고민
+					if (!server->SendPost(&server->session[i]))
+					{						
+						server->session[i].IOCountDecre();
 					}
 				}
 			}

@@ -36,19 +36,26 @@ private:
 
 	SOCKET listenSocket;
 	HANDLE hIocp;
+
+protected:
 	int SessionCount;
 
 // Virtual Section
 protected:
 	virtual void OnJoin(int Index) = 0;
 	virtual void OnRecv(int Index, class CMessageBuffer* Buffer) = 0;
+	virtual void OnLeave(int Index) = 0;
 
 // Networking Function Section
 private:
 	bool RecvPost(CSession* InSession);
 	bool SendPost(CSession* InSession);
-	void CompleteRecv(CSession* InSession, DWORD transferred);
 
+	void CompleteRecv(CSession* InSession, DWORD transferred);
+	void CompleteSend(CSession* InSession, DWORD transferred);
+
+	void GameProcess();
+	void ReleaseCheckProcess();
 protected:
 	bool SendPacket(int Index, class CMessageBuffer* Buffer);
 

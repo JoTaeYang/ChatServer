@@ -7,8 +7,18 @@
 */
 enum EPacketType {
 
-	CS_CHAT = 10,
-	SC_CHAT = 11,
+	/*
+	position
+	x - 4
+	y - 4
+	z - 4
+
+	rotation
+	yaw - 4
+	pitch - 4
+	roll - 4
+	*/
+	SC_CREATE_MY = 10,
 
 	/*
 	position
@@ -17,14 +27,9 @@ enum EPacketType {
 	z - 4
 
 	rotation
-	yaw - 2
-	pitch - 2
-	roll - 2
-	*/
-	SC_CREATE_MY = 10,
-
-	/*
-	
+	yaw - 4
+	pitch - 4
+	roll - 4
 	*/
 	SC_CREATE_OTHER = 11,
 
