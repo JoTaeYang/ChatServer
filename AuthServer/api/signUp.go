@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/JoTaeYang/ChatServer/GoLibrary/base"
@@ -39,6 +40,8 @@ func (r *SignUpApi) Check(c *gin.Context) bool {
 	if err != nil {
 		return false
 	}
+
+	log.Println(req)
 
 	if req.Id == "" {
 		c.JSON(http.StatusOK, gin.H{
