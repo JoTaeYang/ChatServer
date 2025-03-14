@@ -41,6 +41,10 @@ func Login(c *gin.Context) {
 	if !r.CacheSave(c) {
 		return
 	}
+
+	if !r.Ans(c) {
+		return
+	}
 }
 
 func (r *LoginApi) Check(c *gin.Context) bool {
@@ -113,7 +117,7 @@ func (r *LoginApi) DbSave(c *gin.Context) bool {
 
 func (r *LoginApi) CacheSave(c *gin.Context) bool {
 	var err error
-	err = bfredis.SetSessionKey(c.Request.Context(), r.Uid, r.SessionKey)
+	err = bfredis.SetSessionKey(c.Request.Context(), r.Uid, r.auth.SessionKey)
 	if err != nil {
 		return false
 	}
@@ -122,7 +126,7 @@ func (r *LoginApi) CacheSave(c *gin.Context) bool {
 
 func (r *LoginApi) Ans(c *gin.Context) bool {
 	ans := bf.LoginAns{
-		Key: r.SessionKey,
+		Key: r.auth.SessionKey,
 	}
 	c.JSON(http.StatusOK, &ans)
 	return true
