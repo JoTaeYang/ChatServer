@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/JoTaeYang/ChatServer/GoLibrary/bfdata/rdb"
@@ -36,6 +37,56 @@ func (d *Auth) Init(rows *sql.Row) (err error) {
 }
 
 type AuthRepository struct {
+}
+
+func (i *AuthRepository) SelectId(data *Auth, id string, shardIdx int32) error {
+	db := bfsql.RDB.GetGameDB(shardIdx)
+
+	queries := []string{
+		`SELECT * FROM`,
+		data.GetRDBTable(),
+		`where id = ?`,
+	}
+
+	query := strings.Join(queries, " ")
+
+	rows := db.QueryRow(query, id)
+
+	return data.Init(rows)
+}
+
+func (i *AuthRepository) Update(data *Auth, pk string, shardIdx int32, update map[string]interface{}) error {
+	db := bfsql.RDB.GetGameDB(shardIdx)
+
+	tmp := []string{}
+	args := make([]interface{}, 0, len(update)+1)
+	for k, v := range update {
+		tmp = append(tmp, k)
+		tmp = append(tmp, " = ?")
+		args = append(args, v)
+	}
+
+	setListString := strings.Join(tmp, " ")
+
+	queries := []string{
+		`UPDATE`,
+		data.GetRDBTable(),
+		setListString,
+		`where pk = ?`,
+	}
+
+	args = append(args, pk)
+
+	query := strings.Join(queries, " ")
+
+	results, err := db.Exec(query, args)
+	if err != nil {
+		return err
+	}
+
+	log.Println(results.RowsAffected())
+
+	return nil
 }
 
 func (i *AuthRepository) Insert(data *Auth, shardIdx int32) error {

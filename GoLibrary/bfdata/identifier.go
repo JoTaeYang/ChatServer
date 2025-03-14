@@ -18,7 +18,7 @@ type Identifier struct {
 }
 
 func (d *Identifier) GetDBName() string {
-	return "IDENTIFIER"
+	return "IDENTITY"
 }
 
 func (d *Identifier) GetRDBTable() string {
@@ -32,6 +32,27 @@ func (d *Identifier) Init(rows *sql.Row) (err error) {
 }
 
 type IdentiferRepository struct {
+}
+
+func (i *IdentiferRepository) Select(data *Identifier, pk string) error {
+	db := bfsql.RDB.GetIdentityDB()
+	if db == nil {
+		return errors.New("db object nil")
+	}
+
+	queries := []string{
+		`SELECT * FROM`,
+		data.GetRDBTable(),
+		`where pk = ?`,
+	}
+
+	query := strings.Join(queries, " ")
+
+	if err := SelectFromPk(db, query, pk, data); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *IdentiferRepository) Insert(data *Identifier) error {

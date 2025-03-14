@@ -50,6 +50,13 @@ func (r *SignUpApi) Check(c *gin.Context) bool {
 		return false
 	}
 
+	if req.Pw != req.Pw_Check {
+		c.JSON(http.StatusOK, gin.H{
+			"err_code": 1,
+		})
+		return false
+	}
+
 	r.Req = req
 	return true
 }
@@ -89,13 +96,13 @@ func (r *SignUpApi) DbSave(c *gin.Context) bool {
 	auth := &bfdata.Auth{
 		Id:         req.Id,
 		Pw:         req.Pw,
-		SessionKey: base.GenUUID()[:25],
+		SessionKey: base.GenUUID(),
 		Attr: map[string]string{
 			"DUMMY": "DUMMY",
 		},
 	}
 
-	auth.SetPK(base.GenUUID()[:25])
+	auth.SetPK(base.GenUUID())
 	err = autoRepo.Insert(auth, data.ShardIdx)
 	if err != nil {
 		repo.Delete(data)

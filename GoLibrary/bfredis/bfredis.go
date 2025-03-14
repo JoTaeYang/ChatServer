@@ -19,12 +19,12 @@ type RedisWrap struct {
 }
 
 var (
-	appname string
+	appName string
 	Redis   RedisWrap
 )
 
 func InitService(cfg Config) error {
-	appname = cfg.AppName
+	appName = cfg.AppName
 
 	Redis.WriteRedisCli = redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:    cfg.Addr,
