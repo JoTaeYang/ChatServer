@@ -68,20 +68,26 @@ target_link_libraries(RPGServer PRIVATE "${MYSQL_LIB_FILE}")
 
 ######################################################################################################################################################################
 
-set(HIREDIS_ROOT "${CMAKE_SOURCE_DIR}/external/hiredis/install")
-set(REDIS_PLUS_PLUS_ROOT "${CMAKE_SOURCE_DIR}/external/redis-plus-plus/install")
+set(HIREDIS_BASE_PATH "${CMAKE_SOURCE_DIR}/external/hiredis")
+set(REDIS_PLUS_PLUS_BASE_PATH "${CMAKE_SOURCE_DIR}/external/redis-plus-plus")
 
-# hiredis 포함
+set(HIREDIS_ROOT "${HIREDIS_BASE_PATH}/$<IF:$<CONFIG:Debug>,debug_install,install>")
+set(REDIS_PLUS_PLUS_ROOT "${REDIS_PLUS_PLUS_BASE_PATH}/$<IF:$<CONFIG:Debug>,debug_install,install>")
+
+set(HIREDIS_DLL_FILE "${HIREDIS_ROOT}/bin/hiredis.dll")
+set(REDIS_PLUS_PLUS_DLL_FILE "${REDIS_PLUS_PLUS_ROOT}/bin/redis++.dll")
+
+# Include 및 Library 경로 추가
 include_directories(${HIREDIS_ROOT}/include)
-link_directories(${HIREDIS_ROOT}/lib)
-
-# redis-plus-plus 포함
 include_directories(${REDIS_PLUS_PLUS_ROOT}/include)
+link_directories(${HIREDIS_ROOT}/lib)
 link_directories(${REDIS_PLUS_PLUS_ROOT}/lib)
 
 # 라이브러리 연결
-target_link_libraries(RPGServer PRIVATE ${REDIS_PLUS_PLUS_ROOT}/lib/redis++.lib ${HIREDIS_ROOT}/lib/hiredis.lib)
-
+target_link_libraries(RPGServer PRIVATE
+    ${REDIS_PLUS_PLUS_ROOT}/lib/redis++.lib
+    ${HIREDIS_ROOT}/lib/hiredis.lib
+)
 # DLL 자동 복사 (Windows 전용)
 if(WIN32)
     add_custom_command(TARGET RPGServer POST_BUILD
@@ -90,5 +96,16 @@ if(WIN32)
             "$<TARGET_FILE_DIR:RPGServer>"
     )
 
+    add_custom_command(TARGET RPGServer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${HIREDIS_DLL_FILE}"
+            "$<TARGET_FILE_DIR:RPGServer>"
+    )
+
+    add_custom_command(TARGET RPGServer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${REDIS_PLUS_PLUS_DLL_FILE}"
+            "$<TARGET_FILE_DIR:RPGServer>"
+    )
 
 endif()
