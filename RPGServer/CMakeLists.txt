@@ -62,10 +62,25 @@ set(MYSQL_LIB_DIR "$<IF:$<CONFIG:Debug>,${MYSQL_CONNECTOR_ROOT}/Debug,${MYSQL_CO
 set(MYSQL_LIB_FILE "${MYSQL_LIB_DIR}/mysqlcppconnx.lib")
 set(MYSQL_DLL_FILE "${MYSQL_LIB_DIR}/mysqlcppconnx-2-vs14.dll")
 
-
 # MySQL Connector 라이브러리 링크
 target_link_directories(RPGServer PRIVATE "${MYSQL_LIB_DIR}")
 target_link_libraries(RPGServer PRIVATE "${MYSQL_LIB_FILE}")
+
+######################################################################################################################################################################
+
+set(HIREDIS_ROOT "${CMAKE_SOURCE_DIR}/external/hiredis/install")
+set(REDIS_PLUS_PLUS_ROOT "${CMAKE_SOURCE_DIR}/external/redis-plus-plus/install")
+
+# hiredis 포함
+include_directories(${HIREDIS_ROOT}/include)
+link_directories(${HIREDIS_ROOT}/lib)
+
+# redis-plus-plus 포함
+include_directories(${REDIS_PLUS_PLUS_ROOT}/include)
+link_directories(${REDIS_PLUS_PLUS_ROOT}/lib)
+
+# 라이브러리 연결
+target_link_libraries(RPGServer PRIVATE ${REDIS_PLUS_PLUS_ROOT}/lib/redis++.lib ${HIREDIS_ROOT}/lib/hiredis.lib)
 
 # DLL 자동 복사 (Windows 전용)
 if(WIN32)
@@ -74,4 +89,6 @@ if(WIN32)
             "${MYSQL_DLL_FILE}"
             "$<TARGET_FILE_DIR:RPGServer>"
     )
+
+
 endif()
