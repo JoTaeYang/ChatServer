@@ -56,6 +56,7 @@ public:
 
 	CMessageBuffer& operator >>(double& dValue);
 	CMessageBuffer& operator >>(long long& iValue);
+	CMessageBuffer& operator >>(unsigned long long& iValue);
 
 	int GetData(char* chpDest, int iSize);
 

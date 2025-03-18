@@ -17,6 +17,8 @@
 #include "Library/Setting/CSetting.h"
 #include "Library/MessageBuffer/MessageBuffer.h"
 
+#include "Library/DB/CRedisDB.h"
+
 #pragma comment(lib, "ws2_32")
 
 
@@ -24,7 +26,7 @@ CServer::~CServer()
 {
 }
 
-bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
+bool CServer::Start(const int InSessionCount, const CSetting& InSetting, const CRedisDB* Redis)
 {
 	WSADATA wsa = { 0 };
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -40,7 +42,7 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 
 	SOCKADDR_IN serverAddr = { 0 };
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(InSetting.GetPort());
+	serverAddr.sin_port = htons(InSetting.serverPort);
 	serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 
 	if (bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
@@ -64,6 +66,8 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 
 	SessionCount = InSessionCount;
 
+	redisDB = Redis;
+
 	auto threadHandle = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, (LPVOID)this, 0, 0);
@@ -72,6 +76,8 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting)
 	CloseHandle(threadHandle);
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, SendThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
+
+
 
 	InitMonitoring();
 	return true;
@@ -254,6 +260,7 @@ void CServer::CompleteSend(CSession* InSession, DWORD transferred)
 		--count;
 	}
 
+	std::cout << "Complete Send Function Call End\n";
 	InSession->UpdateSendFlag(0);
 }
 
@@ -431,6 +438,37 @@ void CServer::ReleaseCheckProcess()
 	}
 }
 
+void CServer::EnterGameCheckProcess()
+{
+	CMessageBuffer* buffer = nullptr;
+	int loop = 0;
+	for (int i = 0; i < SessionCount; ++i)
+	{
+		if (loop > 100) break;
+		if (session[i].IsOnLogin() )
+		{
+			// TODO :: Connect 된지 일정 시간이 지났는데도 안보낸다면? 연결 끊기 절차로 
+
+			std::string k = "";
+
+			// recv 한 session Key가 있으면 complete queue를 일단 까봐야 알 수 있어서 한 번 해줘야 한다..
+			buffer = NULL;
+			if (!session[i].PopCompleteBuffer(buffer))
+				break;
+			if (buffer == NULL)
+				break;
+			OnRecv(i, buffer);
+			buffer->DecRef();
+
+			if (OnSessionKey(i))
+			{
+				session[i].Start();
+			}
+			++loop;			
+		}
+	}
+}
+
 unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 {
 	CServer* server = (CServer*)lpParam;
@@ -439,6 +477,7 @@ unsigned int WINAPI CServer::LogicThread(LPVOID lpParam)
 	int loop = 0;
 	while (server->exitCheck == 0)
 	{
+		server->EnterGameCheckProcess();
 		server->GameProcess();
 		server->ReleaseCheckProcess();
 		Sleep(5);

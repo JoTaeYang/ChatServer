@@ -21,7 +21,7 @@ private:
 	enum class SessionStatus {
 		NONE,
 		LOGIN,
-
+		
 		GAME,
 
 		LOGOUT
@@ -35,6 +35,10 @@ public:
 		return (status == SessionStatus::LOGOUT);
 	}
 
+	bool IsOnLogin() {
+		return (status == SessionStatus::LOGIN);
+	}
+
 	bool IsSending() {
 		return sendFlag == 1;
 	}
@@ -43,12 +47,14 @@ public:
 		return this->sendBuffer.GetCount();
 	}
 
+
 public:
 	CSession();
 	CSession(CSession&& session) noexcept;
 	CSession(const CSession& session);
 
 	void Init(SOCKET& socket, unsigned short index);					// 각 필드를 NULL로 초기화 하는 함수
+	void Start();
 	void Release();
 
 	const SOCKET GetSocket() const;

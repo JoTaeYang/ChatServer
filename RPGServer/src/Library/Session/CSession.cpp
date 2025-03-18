@@ -33,10 +33,15 @@ void CSession::Init(SOCKET& socket, unsigned short index)
 	this->index = index;
 	this->sendFlag = 0;
 	this->IOCount = 0;
-	this->status = SessionStatus::GAME;
+	this->status = SessionStatus::LOGIN;
 
 	ZeroMemory(&this->recvOverlapped, sizeof(WSAOVERLAPPED));
 	ZeroMemory(&this->sendOverlapped, sizeof(WSAOVERLAPPED));
+}
+
+void CSession::Start()
+{
+	this->status = SessionStatus::GAME;
 }
 
 void CSession::Release()

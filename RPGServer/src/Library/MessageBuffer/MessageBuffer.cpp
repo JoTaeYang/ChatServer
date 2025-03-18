@@ -265,6 +265,14 @@ CMessageBuffer& CMessageBuffer::operator >>(long long& iValue)
 	return *this;
 }
 
+CMessageBuffer& CMessageBuffer::operator>>(unsigned long long& iValue)
+{
+	memcpy(&(iValue), (Buffer + ReadPos), 8);
+	ReadPos += 8;
+	UseLength -= 8;
+	return *this;
+}
+
 int CMessageBuffer::GetData(char* chpDest, int iSize)
 {
 	memcpy(chpDest, (Buffer + ReadPos), iSize);

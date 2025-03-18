@@ -16,7 +16,7 @@ class CSession;
 
 #include <WinSock2.h>
 #include <atomic>
-
+#include <string>
 #include <memory>
 
 
@@ -26,7 +26,7 @@ public:
 	CServer() = default;
 	virtual ~CServer();
 
-	bool Start(const int InSessionCount, const class CSetting &InSetting);
+	bool Start(const int InSessionCount, const class CSetting &InSetting, const class CRedisDB* Redis);
 	bool Stop();
 
 	const int GetSessionCount() { return SessionCount; }
@@ -39,12 +39,14 @@ private:
 
 protected:
 	int SessionCount;
+	const class CRedisDB* redisDB;
 
 // Virtual Section
 protected:
 	virtual void OnJoin(int Index) = 0;
 	virtual void OnRecv(int Index, class CMessageBuffer* Buffer) = 0;
 	virtual void OnLeave(int Index) = 0;
+	virtual bool OnSessionKey(int Index) = 0;
 
 // Networking Function Section
 private:
@@ -56,6 +58,7 @@ private:
 
 	void GameProcess();
 	void ReleaseCheckProcess();
+	void EnterGameCheckProcess();
 protected:
 	bool SendPacket(int Index, class CMessageBuffer* Buffer);
 

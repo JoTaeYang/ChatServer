@@ -7,6 +7,16 @@
 */
 enum EPacketType {
 
+
+	/*
+	session_key - 16
+	*/
+	CS_AUTH = 1,
+
+	/*
+	success - 1
+	*/
+	SC_AUTH = 2,
 	/*
 	position
 	x - 4
@@ -34,7 +44,7 @@ enum EPacketType {
 	SC_CREATE_OTHER = 11,
 
 	/*
-	
+
 	position
 	x - 4 byte
 	y - 4 byte
@@ -52,6 +62,7 @@ enum EPacketType {
 
 	*/
 	CS_MOVE_MY = 20,
+	SC_MOVE_CHAR = 21,
 
 	CS_ECHO = 1000,
 	SC_ECHO = 1001

@@ -1,7 +1,7 @@
 #pragma once
 
 
-
+#include <string>
 
 class User
 {
@@ -33,6 +33,13 @@ public:
 	void GetCreatePosRot(float& PX, float& PY, float& PZ,
 		float& RX, float& RY, float& RZ);
 
+	void GetMoveInfos(float& PX, float& PY, float& PZ,
+		float& RX, float& RY, float& RZ,
+		float& VX, float& VY, float& VZ);
+
+
+	std::string sessionKey;
+
 private:
 	void updatePos(float PX, float PY, float PZ,
 		float RX, float RY, float RZ,
@@ -51,4 +58,5 @@ private:
 	float VZ;
 
 	Status Status;
+
 };

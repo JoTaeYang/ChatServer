@@ -3,11 +3,12 @@
 class CSetting
 {
 public:
-	CSetting(const std::string InFileName);
+	void LoadSettings(const std::string InFileName);
 
-	int GetPort() const;
+	int serverPort;
 
-private:
-	int port;
+	std::string redisIP;
+	int redisPort;
+	std::string redisAppName;
 };
 
