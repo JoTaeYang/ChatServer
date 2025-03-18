@@ -88,6 +88,20 @@ target_link_libraries(RPGServer PRIVATE
     ${REDIS_PLUS_PLUS_ROOT}/lib/redis++.lib
     ${HIREDIS_ROOT}/lib/hiredis.lib
 )
+
+########################
+include(FetchContent)
+
+FetchContent_Declare(
+	json
+	GIT_REPOSITORY https://github.com/nlohmann/json.git
+	GIT_TAG v3.11.3
+)
+
+FetchContent_MakeAvailable(json)
+
+target_link_libraries(RPGServer PRIVATE nlohmann_json::nlohmann_json)
+
 # DLL 자동 복사 (Windows 전용)
 if(WIN32)
     add_custom_command(TARGET RPGServer POST_BUILD
