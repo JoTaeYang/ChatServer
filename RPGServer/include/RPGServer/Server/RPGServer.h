@@ -45,15 +45,15 @@ private:
 			return (quantizedValue - SHRT_MIN) * (X_MAX - X_MIN) / (SHRT_MAX - SHRT_MIN) + X_MIN;
 	}
 
-	short QuantizeFloatToInt16(float value);
+	short QuantizeFloatToInt16(float value, bool isVelocity = false);
 
 
 	// 양자화할 최소/최대 범위 설정
-	const float X_MIN = -1000.0f;
-	const float X_MAX = 1000.0f;
+	const float X_MIN = -180.0f;
+	const float X_MAX = 180.0f;
 
-	const float VX_MIN = -1000.0f;
-	const float VX_MAX = 1000.0f;
+	const float VX_MIN = -500.0f;
+	const float VX_MAX = 500.0f;
 
 private:
 

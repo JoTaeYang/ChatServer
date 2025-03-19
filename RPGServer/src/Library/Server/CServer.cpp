@@ -241,7 +241,6 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 
 void CServer::CompleteSend(CSession* InSession, DWORD transferred)
 {
-	std::cout << "Complete Send Function Call Check\n";
 	int count = InSession->sendCount;
 
 	CMessageBuffer* pBuffer;
@@ -260,7 +259,6 @@ void CServer::CompleteSend(CSession* InSession, DWORD transferred)
 		--count;
 	}
 
-	std::cout << "Complete Send Function Call End\n";
 	InSession->UpdateSendFlag(0);
 }
 

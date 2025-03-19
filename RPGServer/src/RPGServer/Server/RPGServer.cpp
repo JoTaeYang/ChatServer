@@ -33,49 +33,6 @@ bool RPGServer::Start(const int InSessionCount, const CSetting& InSetting, const
 void RPGServer::OnJoin(int Index)
 {
 	users[Index].Init();
-
-	// 유저 캐릭터 생성
-	CMessageBuffer* pBuffer = CMessageBuffer::Alloc();
-
-	CreatePlayer(Index, pBuffer);
-
-	SendPacket(Index, pBuffer);
-
-
-	// 나 -> 타인
-	CMessageBuffer* createThisOtherUsers = CMessageBuffer::Alloc();
-
-	// 다른 유저들한테 Join한 캐릭터 생성하는 메시지 생성
-	MakePacketCreateOtherPlayer(Index, createThisOtherUsers);
-
-	// TODO 전송하기
-
-	// 타인 -> 나
-	CMessageBuffer* createOtherUsers = NULL;
-	for (int i = 0; i < SessionCount; ++i)
-	{
-		if (users[i].IsGame())
-		{
-			// 내가 아닌 다른 캐릭터를 나에게 생성하라고 전송하기 
-			if (Index != i)
-			{
-				createOtherUsers = CMessageBuffer::Alloc();
-
-				MakePacketCreateOtherPlayer(Index, createOtherUsers);
-
-				SendPacket(Index, createOtherUsers);
-				createOtherUsers->DecRef();
-
-				// 다른 캐릭터에게 나를 생성하라고 전송하기
-				
-				SendPacket(i, createThisOtherUsers);
-
-			}			
-		}
-	}
-
-	pBuffer->DecRef();
-	createThisOtherUsers->DecRef();
 }
 
 void RPGServer::OnRecv(int Index, class CMessageBuffer* Buffer)
@@ -117,6 +74,48 @@ bool RPGServer::OnSessionKey(int Index)
 		if (infos.Uid != "")
 		{
 			std::cout << "Redis UID Check : " << infos.Uid << "\n";
+			// 유저 캐릭터 생성
+			CMessageBuffer* pBuffer = CMessageBuffer::Alloc();
+
+			CreatePlayer(Index, pBuffer);
+
+			SendPacket(Index, pBuffer);
+
+
+			// 나 -> 타인
+			CMessageBuffer* createThisOtherUsers = CMessageBuffer::Alloc();
+
+			// 다른 유저들한테 Join한 캐릭터 생성하는 메시지 생성
+			MakePacketCreateOtherPlayer(Index, createThisOtherUsers);
+
+			// TODO 전송하기
+
+			// 타인 -> 나
+			CMessageBuffer* createOtherUsers = NULL;
+			for (int i = 0; i < SessionCount; ++i)
+			{
+				if (users[i].IsGame())
+				{
+					// 내가 아닌 다른 캐릭터를 나에게 생성하라고 전송하기 
+					if (Index != i)
+					{
+						createOtherUsers = CMessageBuffer::Alloc();
+
+						MakePacketCreateOtherPlayer(Index, createOtherUsers);
+
+						SendPacket(Index, createOtherUsers);
+						createOtherUsers->DecRef();
+
+						// 다른 캐릭터에게 나를 생성하라고 전송하기
+
+						SendPacket(i, createThisOtherUsers);
+
+					}
+				}
+			}
+
+			pBuffer->DecRef();
+			createThisOtherUsers->DecRef();
 			return true;
 		}		
 	}		
@@ -156,12 +155,13 @@ void RPGServer::MakePacketCreateOtherPlayer(int Index, CMessageBuffer* buffer)
 
 	header.byCode = 0x89;
 	header.wType = EPacketType::SC_CREATE_OTHER;
-	header.bySize = 24;
+	header.bySize = 40;
 
 	
 	users[Index].GetCreatePosRot(posX, posY, posZ, yaw, pitch, roll);
 
 	buffer->PutData((char*)&header, sizeof(Header));
+	buffer->PutData(users[Index].sessionHex, sizeof(users[Index].sessionHex));
 	*buffer << posX << posY << posZ << yaw << pitch << roll;	
 }
 
@@ -171,16 +171,16 @@ void RPGServer::MakePacketCreateMovePlayer(int Index, CMessageBuffer* buffer)
 	float posX, posY, posZ, yaw, pitch, roll, vX, vY, vZ;
 
 	header.byCode = 0x89;
-	header.wType = EPacketType::SC_CREATE_OTHER;
-	header.bySize = 24;
-
+	header.wType = EPacketType::SC_MOVE_CHAR;
+	header.bySize = 40;
 
 	users[Index].GetMoveInfos(posX, posY, posZ, yaw, pitch, roll, vX, vY, vZ);
 
 	buffer->PutData((char*)&header, sizeof(Header));
+	buffer->PutData(users[Index].sessionHex, sizeof(users[Index].sessionHex));
 	*buffer << posX << posY << posZ 
 		<< QuantizeFloatToInt16(yaw) << QuantizeFloatToInt16(pitch) << QuantizeFloatToInt16(roll)
-		<< QuantizeFloatToInt16(vX) << QuantizeFloatToInt16(vY) << QuantizeFloatToInt16(vZ);
+		<< QuantizeFloatToInt16(vX, true) << QuantizeFloatToInt16(vY, true) << QuantizeFloatToInt16(vZ, true);
 }
 
 void RPGServer::SendAround(int Index)
@@ -214,7 +214,7 @@ void RPGServer::PacketProc_Move_Client(int Index, CMessageBuffer* Buffer)
 			// 다른 캐릭터에게 나를 움직이게 하기
 			if (Index != i)
 			{
-				SendPacket(Index, otherMove);				
+				SendPacket(i, otherMove);				
 			}
 		}
 	}
@@ -249,18 +249,30 @@ void RPGServer::PacketProc_Auth(int Index, CMessageBuffer* Buffer)
 	Buffer->GetData(a, 16);
 	for (uint8_t byte : a)
 	{
-		oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+		oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte); 
 	}
 
 	users[Index].sessionKey = std::move(oss.str());	
+	memcpy_s(users[Index].sessionHex, 16, a, 16);
 }
 
-short RPGServer::QuantizeFloatToInt16(float value)
+short RPGServer::QuantizeFloatToInt16(float value, bool isVelocity)
 {
-	value = std::clamp(value, X_MIN, X_MAX);
+	
 
-	return static_cast<short>(
-		(value - X_MIN) * (SHRT_MAX - SHRT_MIN) / (X_MAX - X_MIN) + SHRT_MIN
-		);
+	if (isVelocity)
+	{
+		value = std::clamp(value, VX_MIN, VX_MAX);
+		return static_cast<short>(
+			(value - VX_MIN) * (SHRT_MAX - SHRT_MIN) / (VX_MAX - VX_MIN) + SHRT_MIN
+			);
+	}
+	else
+	{
+		value = std::clamp(value, X_MIN, X_MAX);
+		return static_cast<short>(
+			(value - X_MIN) * (SHRT_MAX - SHRT_MIN) / (X_MAX - X_MIN) + SHRT_MIN
+			);
+	}
 }
 

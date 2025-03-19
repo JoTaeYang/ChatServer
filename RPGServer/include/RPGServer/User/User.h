@@ -39,6 +39,7 @@ public:
 
 
 	std::string sessionKey;
+	char sessionHex[16];
 
 private:
 	void updatePos(float PX, float PY, float PZ,
