@@ -37,6 +37,7 @@ public:
 		float& RX, float& RY, float& RZ,
 		float& VX, float& VY, float& VZ);
 
+	void Leave();
 
 	std::string sessionKey;
 	char sessionHex[16];

@@ -15,8 +15,10 @@ enum EPacketType {
 
 	/*
 	success - 1
+	TODO °í¹Î Áß
 	*/
 	SC_AUTH = 2,
+
 	/*
 	position
 	x - 4
@@ -32,6 +34,8 @@ enum EPacketType {
 
 	/*
 	position
+
+	
 	x - 4
 	y - 4
 	z - 4
@@ -62,7 +66,11 @@ enum EPacketType {
 
 	*/
 	CS_MOVE_MY = 20,
+	
 	SC_MOVE_CHAR = 21,
+
+	CS_MOVE_STOP = 22,
+	SC_MOVE_STOP_CHAR = 23,
 
 	CS_ECHO = 1000,
 	SC_ECHO = 1001

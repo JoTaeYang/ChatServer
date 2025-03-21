@@ -61,8 +61,11 @@ func (i *AuthRepository) Update(data *Auth, pk string, shardIdx int32, update ma
 	tmp := []string{}
 	args := make([]interface{}, 0, len(update)+1)
 	for k, v := range update {
+		if len(tmp) > 0 {
+			tmp = append(tmp, ",")
+		}
 		tmp = append(tmp, k)
-		tmp = append(tmp, " = ?")
+		tmp = append(tmp, "= ?")
 		args = append(args, v)
 	}
 
@@ -71,15 +74,16 @@ func (i *AuthRepository) Update(data *Auth, pk string, shardIdx int32, update ma
 	queries := []string{
 		`UPDATE`,
 		data.GetRDBTable(),
+		`SET`,
 		setListString,
-		`where pk = ?`,
+		`WHERE pk = ?`,
 	}
 
 	args = append(args, pk)
 
 	query := strings.Join(queries, " ")
 
-	results, err := db.Exec(query, args)
+	results, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}

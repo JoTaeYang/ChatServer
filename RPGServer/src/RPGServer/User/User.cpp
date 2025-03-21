@@ -14,8 +14,7 @@ void User::Init()
 
 void User::UpdateCharacterMove(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)
 {
-	updatePos(PX, PY, PZ, RX, RY, RZ, VX, VY, VZ);
-		
+	updatePos(PX, PY, PZ, RX, RY, RZ, VX, VY, VZ);			
 }
 
 void User::InitPlayer(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)
@@ -48,6 +47,13 @@ void User::GetMoveInfos(float& PX, float& PY, float& PZ, float& RX, float& RY, f
 	VX = this->VX;
 	VY = this->VY;
 	VZ = this->VZ;
+}
+
+void User::Leave()
+{
+	Status = User::Status::NONE;
+
+	sessionKey = "";
 }
 
 void User::updatePos(float PX, float PY, float PZ, float RX, float RY, float RZ, float VX, float VY, float VZ)

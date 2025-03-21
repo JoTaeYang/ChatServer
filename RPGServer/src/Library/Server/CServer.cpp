@@ -77,7 +77,7 @@ bool CServer::Start(const int InSessionCount, const CSetting& InSetting, const C
 	threadHandle = (HANDLE)_beginthreadex(NULL, 0, SendThread, (LPVOID)this, 0, 0);
 	CloseHandle(threadHandle);
 
-
+	recvCall = 0;
 
 	InitMonitoring();
 	return true;
@@ -107,18 +107,30 @@ bool CServer::Stop()
 
 bool CServer::RecvPost(CSession* InSession)
 {
-	WSABUF wsa;
+	WSABUF wsa[2] = { 0, };
 	CRingBuffer* buffer = InSession->GetRecvRingBuffer();
 	DWORD flags = 0;
 	int retRecvCount = 0;
+	int bufCount = 2;
 
-	wsa.buf = buffer->GetRearBufferPtr();
-	wsa.len = buffer->DirectEnqueueSize();
+	wsa[0].buf = buffer->GetRearBufferPtr();
+	wsa[0].len = buffer->DirectEnqueueSize();
+
+	if (buffer->GetFrontBufferPtr() - buffer->GetStartBufferPtr() >= 10)
+	{
+		wsa[1].buf = buffer->GetStartBufferPtr();
+		wsa[1].len = buffer->GetFreeSize() - buffer->DirectDequeueSize();
+	}
+	else
+		bufCount = 1;
 
 	InterlockedIncrement(&InSession->IOCount);
 
 	WSAOVERLAPPED* recv = InSession->GetRecvOverlapped();
-	retRecvCount = WSARecv(InSession->GetSocket(), &wsa, 1, NULL, &flags, recv, NULL);
+	recvCall.fetch_add(1);
+	printf("[Recv Post] Recv Post Call %d\n", recvCall.load());
+	ZeroMemory(recv, sizeof(WSAOVERLAPPED));
+	retRecvCount = WSARecv(InSession->GetSocket(), wsa, bufCount, NULL, &flags, recv, NULL);
 	if (retRecvCount == SOCKET_ERROR)
 	{
 		auto error = WSAGetLastError();
@@ -205,6 +217,7 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 	size_t headerSize = sizeof(Header);
 
 	buffer->MoveRear(transferred);
+	printf("[Worker Thread] Complete Recv Call\n");
 	while (transferred > 0)
 	{
 		CMessageBuffer* msgBuffer = CMessageBuffer::Alloc();
@@ -222,6 +235,9 @@ void CServer::CompleteRecv(CSession* InSession, DWORD transferred)
 			msgBuffer->DecRef();
 			break;
 		}
+
+		if (header.wType != 20)
+			std::cout << "Recv Header Type : " << header.wType << "\n";
 		
 		int dequeSize = headerSize + header.bySize;
 		buffer->Dequeue((char *)msgBuffer->GetBufferPtr(), dequeSize);
@@ -426,9 +442,11 @@ void CServer::ReleaseCheckProcess()
 	for (int i = 0; i < SessionCount; ++i)
 	{
 		if (loop > 2000) break;
+		//TODO :: IO COUNT 체크도 넣어야 할지 고민
 		if (session[i].IsOnLogout() && !session[i].IsSending())
 		{
-			session[i].Release();
+			OnLeave(i);
+			session[i].Release();			
 
 			++loop;
 			sessionIndex->Push(i);

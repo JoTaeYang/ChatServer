@@ -54,12 +54,15 @@ void RPGServer::OnRecv(int Index, class CMessageBuffer* Buffer)
 	case EPacketType::CS_MOVE_MY:
 		PacketProc_Move_Client(Index, Buffer);	
 		break;
+	case EPacketType::CS_MOVE_STOP:
+		PacketProc_Move_Stop(Index, Buffer);
+		break;
 	}
 }
 
 void RPGServer::OnLeave(int Index)
 {
-
+	users[Index].Leave();
 }
 
 bool RPGServer::OnSessionKey(int Index)
@@ -101,7 +104,7 @@ bool RPGServer::OnSessionKey(int Index)
 					{
 						createOtherUsers = CMessageBuffer::Alloc();
 
-						MakePacketCreateOtherPlayer(Index, createOtherUsers);
+						MakePacketCreateOtherPlayer(i, createOtherUsers);
 
 						SendPacket(Index, createOtherUsers);
 						createOtherUsers->DecRef();
@@ -131,8 +134,8 @@ void RPGServer::CreatePlayer(int Index, CMessageBuffer* buffer)
 
 	std::random_device t;
 	std::mt19937 gen(t());
-	std::uniform_int_distribution<int> dis(500, 1000);
-	std::uniform_int_distribution<int> dis2(500, 1000);
+	std::uniform_int_distribution<int> dis(300, 1200);
+	std::uniform_int_distribution<int> dis2(300, 1600);
 		
 	header.byCode = 0x89;
 	header.wType = EPacketType::SC_CREATE_MY;
@@ -183,6 +186,26 @@ void RPGServer::MakePacketCreateMovePlayer(int Index, CMessageBuffer* buffer)
 		<< QuantizeFloatToInt16(vX, true) << QuantizeFloatToInt16(vY, true) << QuantizeFloatToInt16(vZ, true);
 }
 
+void RPGServer::MakePacketCreateStopPlayer(int Index, CMessageBuffer* buffer)
+{
+	Header header;
+	float posX, posY, posZ, yaw, pitch, roll, vX, vY, vZ;
+
+	header.byCode = 0x89;
+	header.wType = EPacketType::SC_MOVE_STOP_CHAR;
+	header.bySize = 40;
+
+	users[Index].GetMoveInfos(posX, posY, posZ, yaw, pitch, roll, vX, vY, vZ);
+
+	buffer->PutData((char*)&header, sizeof(Header));
+	buffer->PutData(users[Index].sessionHex, sizeof(users[Index].sessionHex));
+	*buffer << posX << posY << posZ
+		<< QuantizeFloatToInt16(yaw) << QuantizeFloatToInt16(pitch) << QuantizeFloatToInt16(roll)
+		<< QuantizeFloatToInt16(vX, true) << QuantizeFloatToInt16(vY, true) << QuantizeFloatToInt16(vZ, true);
+
+	std::cout << "Send Move Stop\n";
+}
+
 void RPGServer::SendAround(int Index)
 {
 
@@ -203,7 +226,7 @@ void RPGServer::PacketProc_Move_Client(int Index, CMessageBuffer* Buffer)
 		, DequantizeInt16ToFloat(vx, true), DequantizeInt16ToFloat(vy, true), DequantizeInt16ToFloat(vz, true));
 
 	profile.End("Move_Packet");
-
+	
 	CMessageBuffer* otherMove = CMessageBuffer::Alloc();
 
 	MakePacketCreateMovePlayer(Index, otherMove);
@@ -218,6 +241,10 @@ void RPGServer::PacketProc_Move_Client(int Index, CMessageBuffer* Buffer)
 			}
 		}
 	}
+	//printf("Position : %f %f %f \n", x, y, z);
+	//printf("Rotation : %f %f %f \n", DequantizeInt16ToFloat(yaw), DequantizeInt16ToFloat(pitch), DequantizeInt16ToFloat(roll));
+	//printf("Velocity : %f %f %f \n", DequantizeInt16ToFloat(vx, true), DequantizeInt16ToFloat(vy, true), DequantizeInt16ToFloat(vz,true));
+
 	otherMove->DecRef();
 }
 
@@ -254,6 +281,37 @@ void RPGServer::PacketProc_Auth(int Index, CMessageBuffer* Buffer)
 
 	users[Index].sessionKey = std::move(oss.str());	
 	memcpy_s(users[Index].sessionHex, 16, a, 16);
+}
+
+void RPGServer::PacketProc_Move_Stop(int Index, CMessageBuffer* Buffer)
+{
+	float x, y, z;
+	short yaw, pitch, roll;
+	short vx, vy, vz;
+
+	Profile& profile = Profile::GetInstance();
+
+	*Buffer >> x >> y >> z >> yaw >> pitch >> roll >> vx >> vy >> vz;
+
+	users[Index].UpdateCharacterMove(x, y, z
+		, DequantizeInt16ToFloat(yaw), DequantizeInt16ToFloat(pitch), DequantizeInt16ToFloat(roll)
+		, DequantizeInt16ToFloat(vx, true), DequantizeInt16ToFloat(vy, true), DequantizeInt16ToFloat(vz, true));
+
+	CMessageBuffer* otherMove = CMessageBuffer::Alloc();
+
+	MakePacketCreateStopPlayer(Index, otherMove);
+	for (int i = 0; i < SessionCount; ++i)
+	{
+		if (users[i].IsGame())
+		{
+			// 다른 캐릭터에게 나를 움직이게 하기
+			if (Index != i)
+			{
+				SendPacket(i, otherMove);
+			}
+		}
+	}
+	otherMove->DecRef();
 }
 
 short RPGServer::QuantizeFloatToInt16(float value, bool isVelocity)

@@ -80,6 +80,7 @@ private:
 	std::atomic<int> sendTPS;
 	std::atomic<int> acceptTPS;
 
+	std::atomic<int> recvCall;
 
 	void InitMonitoring();
 };

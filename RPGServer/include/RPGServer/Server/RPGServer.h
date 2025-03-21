@@ -24,7 +24,7 @@ private:
 private:
 	void MakePacketCreateOtherPlayer(int Index, CMessageBuffer* buffer);
 	void MakePacketCreateMovePlayer(int Index, CMessageBuffer* buffer);
-
+	void MakePacketCreateStopPlayer(int Index, CMessageBuffer* buffer);
 private:
 	void SendAround(int Index);
 
@@ -36,6 +36,8 @@ private:
 	void PacketProc_Move_ClientV1(int Index, class CMessageBuffer* Buffer);
 
 	void PacketProc_Auth(int Index, class CMessageBuffer* Buffer);
+
+	void PacketProc_Move_Stop(int Index, class CMessageBuffer* Buffer);
 
 private:
 	float DequantizeInt16ToFloat(short quantizedValue, bool isVelocity = false) {
